@@ -24,6 +24,16 @@ There are various reasons why one would want to control the mouse with the keybo
 Of course, it would be best to avoid using the pointer at all, e.g. with the use of tiling window managers and
 application shortcuts, but sometimes there is no way around.
 
+## Installation
+
+There will soon be pre-built binaries, until then you can build it from source (requires that go is installed):
+
+```shell
+go build -ldflags="-s -w" .
+```
+
+When successful, a binary with name `mouseless` will pop out.
+
 ## Usage
 
 First you need to create a config file, e.g. `~/.config/mouseless/config.yaml`, see below for an example. In there, you
