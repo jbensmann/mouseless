@@ -26,7 +26,9 @@ application shortcuts, but sometimes there is no way around.
 
 ## Installation
 
-There will soon be pre-built binaries, until then you can build it from source (requires that go is installed):
+The simplest way is to download a binary from [Releases](https://github.com/jbensmann/mouseless/releases).
+
+Or you can build it from source (requires that go is installed):
 
 ```shell
 go build -ldflags="-s -w" .
