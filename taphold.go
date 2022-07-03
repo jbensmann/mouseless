@@ -2,15 +2,17 @@ package main
 
 import (
 	"math"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
 type TapHoldHandler struct {
-	inChannel  chan KeyboardEvent
-	outChannel chan KeyboardEvent
-	isPressed  map[uint16]bool
+	inChannel     chan KeyboardEvent
+	outChannel    chan KeyboardEvent
+	isPressed     map[uint16]bool
+	isPressedLock sync.RWMutex
 
 	isHoldBack             bool
 	holdBackEvents         []*KeyboardEvent // pointers so that events can be manipulated
@@ -70,16 +72,20 @@ func (t *TapHoldHandler) handleKey(event KeyboardEvent) {
 		// tapHold key pressed?
 		if binding, ok := currentLayer.Bindings[event.code].(TapHoldBinding); ok {
 			// activate holdBack only when no other key is pressed
-			if len(t.isPressed) == 0 && !t.isHoldBack {
+			if !t.isAnyKeyPressed() && !t.isHoldBack {
 				log.Debugf("Activating holdBack")
 				t.isHoldBack = true
 				t.tapHoldEvent = &event
 				t.tapHoldBinding = &binding
+
 				// remember all pressed keys
 				t.holdBackStartIsPressed = make(map[uint16]bool)
+				t.isPressedLock.RLock()
 				for k, v := range t.isPressed {
 					t.holdBackStartIsPressed[k] = v
 				}
+				t.isPressedLock.RUnlock()
+
 				// set timeout
 				if binding.TimeoutMs > 0 {
 					t.holdBackTimeout = time.NewTimer(time.Duration(binding.TimeoutMs) * time.Millisecond)
@@ -128,11 +134,7 @@ func (t *TapHoldHandler) handleKey(event KeyboardEvent) {
 	}
 
 	// remember if key is pressed
-	if event.isPress {
-		t.isPressed[event.code] = true
-	} else {
-		delete(t.isPressed, event.code)
-	}
+	t.setKeyPressed(event.code, event.isPress)
 }
 
 func (t *TapHoldHandler) InChannel() chan<- KeyboardEvent {
@@ -143,7 +145,25 @@ func (t *TapHoldHandler) OutChannel() <-chan KeyboardEvent {
 	return t.outChannel
 }
 
-func (t *TapHoldHandler) isKeyPressed(code uint16) bool {
+func (t *TapHoldHandler) IsKeyPressed(code uint16) bool {
+	t.isPressedLock.RLock()
+	defer t.isPressedLock.RUnlock()
 	pr, ok := t.isPressed[code]
 	return ok && pr
+}
+
+func (t *TapHoldHandler) isAnyKeyPressed() bool {
+	t.isPressedLock.RLock()
+	defer t.isPressedLock.RUnlock()
+	return len(t.isPressed) > 0
+}
+
+func (t *TapHoldHandler) setKeyPressed(code uint16, pressed bool) {
+	t.isPressedLock.Lock()
+	defer t.isPressedLock.Unlock()
+	if pressed {
+		t.isPressed[code] = true
+	} else {
+		delete(t.isPressed, code)
+	}
 }

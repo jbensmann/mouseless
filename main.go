@@ -161,7 +161,7 @@ func mainLoop() {
 		scrollX := 0.0
 		scrollY := 0.0
 		for code, binding := range currentLayer.Bindings {
-			if tapHoldHandler.isKeyPressed(code) {
+			if tapHoldHandler.IsKeyPressed(code) {
 				switch t := binding.(type) {
 				case SpeedBinding:
 					moveSpeed *= t.Speed
