@@ -61,7 +61,7 @@ func main() {
 		log.SetLevel(log.InfoLevel)
 	}
 
-	listKeyboardDevices()
+	deviceNames := listKeyboardDevices()
 
 	// if no config file is given, use the default one
 	configFile = opts.ConfigFile
@@ -92,7 +92,7 @@ func main() {
 	tapHoldHandler = NewTapHoldHandler()
 
 	// init keyboard devices
-	for _, dev := range config.Devices {
+	for _, dev := range deviceNames {
 		kd := NewKeyboardDevice(dev, tapHoldHandler.InChannel())
 		keyboardDevices = append(keyboardDevices, kd)
 		go kd.ReadLoop()
@@ -291,14 +291,17 @@ func executeBinding(event *KeyboardEvent, binding interface{}) {
 }
 
 // listKeyboardDevices lists all available keyboard input devices.
-func listKeyboardDevices() {
+func listKeyboardDevices() []string {
+	var deviceNames []string
 	devices, _ := evdev.ListInputDevices("/dev/input/by-path/*kbd*")
 	devices2, _ := evdev.ListInputDevices("/dev/input/by-id/*kbd*")
 	devices = append(devices, devices2...)
 	log.Debugf("Available keyboard devices:")
 	for _, dev := range devices {
 		log.Debugf("%s %s %s\n", dev.Fn, dev.Name, dev.Phys)
+		deviceNames = append(deviceNames, dev.Fn)
 	}
+	return deviceNames
 }
 
 func exitError(err error, msg string) {

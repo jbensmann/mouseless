@@ -1,8 +1,10 @@
 # mouseless
 
-This program is a replacement for the physical mouse in Linux.
+This program allows you to control the mouse pointer in Linux with the keyboard. It works in all Linux distributions,
+even those running with Wayland.
 
-It is the successor of [xmouseless](https://github.com/jbensmann/xmouseless).
+mouseless is the successor of [xmouseless](https://github.com/jbensmann/xmouseless), which depended on X11 and had some
+minor issues.
 
 ## Features
 
@@ -10,10 +12,11 @@ It is the successor of [xmouseless](https://github.com/jbensmann/xmouseless).
 - change the pointer speed on the fly
 - click, grab, scroll
 - remap keys
+- define arbitrary layers
 
 ## Why
 
-There are various reasons why one would want to control the mouse with the keyboard instead of a regular mouse:
+There are various reasons why one would want to control the mouse with the keyboard:
 
 - you do not want to leave the keyboard
 - laptop with no or a poor touchpad
@@ -21,7 +24,7 @@ There are various reasons why one would want to control the mouse with the keybo
 - cannot use a mouse for some reason
 - for fun
 
-Of course, it would be best to avoid using the pointer at all, e.g. with the use of tiling window managers and
+Of course, it would be best to avoid using the mouse pointer at all, e.g. with the use of tiling window managers and
 application shortcuts, but sometimes there is no way around.
 
 ## Installation
