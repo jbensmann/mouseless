@@ -2,7 +2,7 @@ devices:
 # change this to a keyboard device
 - "/dev/input/by-id/SOME_KEYBOARD_REPLACE_ME-event-kbd"
 # this is executed when mouseless starts
-startCommand: "setxkbmap en"
+# startCommand: ""
 # the default speed for mouse movement
 baseMouseSpeed: 750.0
 # the default speed for scrolling
