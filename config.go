@@ -310,7 +310,7 @@ func parseBinding(rawBinding string) (binding Binding, err error) {
 		if len(args) == 0 {
 			return nil, fmt.Errorf("action requires at least one argument")
 		}
-		binding = &ExecBinding{Command: argString}
+		binding = ExecBinding{Command: argString}
 	default:
 		combo, err := parseKeyCombo(rawBinding)
 		if err != nil {
