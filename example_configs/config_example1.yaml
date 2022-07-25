@@ -11,9 +11,9 @@ layers:
 # the first layer is active at start
 - name: initial
   bindings:
-    # when tab is holt and another key pressed, activate mouse layer
+    # when tab is held and another key pressed, activate mouse layer
     tab: tap-hold-next tab ; toggle-layer mouse ; 500
-    # when a is holt for 300ms, activate mouse layer
+    # when a is held for 300ms, activate mouse layer
     a: tap-hold a ; toggle-layer mouse ; 300
     # right alt key toggles arrows layer
     rightalt: toggle-layer arrows
