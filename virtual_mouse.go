@@ -1,6 +1,8 @@
 package main
 
 import (
+	"math"
+
 	"github.com/bendahl/uinput"
 	log "github.com/sirupsen/logrus"
 )
@@ -99,8 +101,8 @@ func (v *VirtualMouse) Scroll(x float64, y float64) {
 func (v *VirtualMouse) Move(x float64, y float64) {
 	// this seems to be necessary so that the speed does not change on diagonal move
 	if x != 0 && y != 0 {
-		x *= 0.75
-		y *= 0.75
+		x /= math.Sqrt2
+		y /= math.Sqrt2
 	}
 	v.moveFractionX += x
 	v.moveFractionY += y
