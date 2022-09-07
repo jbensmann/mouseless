@@ -58,10 +58,13 @@ type Layer struct {
 }
 
 type Binding interface {
+	binding()
 }
 
 type BaseBinding struct {
 }
+
+func (b BaseBinding) binding() {}
 
 type MultiBinding struct {
 	BaseBinding
