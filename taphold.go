@@ -121,9 +121,13 @@ func (t *TapHoldHandler) handleKey(event KeyboardEvent) {
 
 	// send to out channel or to holdBackEvents
 	holdBack := t.isHoldBack || previousIsHoldingBack
-	// do not hold back if the key pressed before tap started to avoid unwanted key repetitions
+	// do not hold back key release if the press was before tap started to avoid unwanted key repetitions
 	if _, ok := t.holdBackStartIsPressed[event.code]; ok {
-		holdBack = false
+		if !event.isPress {
+			holdBack = false
+		} else {
+			delete(t.holdBackStartIsPressed, event.code)
+		}
 	}
 	if holdBack {
 		log.Debugf("tapHold: putting event back to queue")
