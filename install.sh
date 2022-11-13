@@ -69,7 +69,7 @@ layers:
     r: delete
     v: enter" > /home/$USER/.config/mouseless/config.yaml 
 # Creates an entry that automatically launches mouseless with the --config flag
-touch mouseless-execute
+touch /home/$USER/mouseless-execute
 echo "
 #!/bin/sh 
 sudo mouseless --config ~/.config/mouseless/config.yaml" > /home/$USER/mouseless-execute
