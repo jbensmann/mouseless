@@ -1,11 +1,12 @@
 #!/bin/sh
 version=0.1.3
 # if the 1st command fails, the second will activate.
-keyboard=$(ls /dev/input/by-id/*kbd* || ls /dev/input/by-path/*kbd*)
+keyboard=$(ls /dev/input/by-id/*kbd* || ls /dev/input/by-path/*kbd* | head -n1)
+temporary=/tmp/mouseless
 # nv means no verbose
-wget -P /home/$USER/ https://github.com/jbensmann/mouseless/releases/download/v$version/mouseless-linux-amd64.tar.gz
-tar -xf /home/$USER/mouseless-linux-amd64.tar.gz --directory /home/$USER/
-sudo cp /home/$USER/dist/mouseless /bin/
+wget -P $temporary https://github.com/jbensmann/mouseless/releases/download/v$version/mouseless-linux-amd64.tar.gz
+tar -xf $temporary/mouseless-linux-amd64.tar.gz --directory $temporary
+sudo cp $temporary/dist/mouseless /usr/local/bin/
 # copies the default config to the .config directory
 mkdir /home/$USER/.config/mouseless
 touch /home/$USER/.config/mouseless/config.yaml 
@@ -69,13 +70,11 @@ layers:
     r: delete
     v: enter" > /home/$USER/.config/mouseless/config.yaml 
 # Creates an entry that automatically launches mouseless with the --config flag
-touch /home/$USER/mouseless-execute
+touch $temporary/mouseless-execute
 echo "
 #!/bin/sh 
-sudo mouseless --config ~/.config/mouseless/config.yaml" > /home/$USER/mouseless-execute
-chmod +x /home/$USER/mouseless-execute
-sudo cp /home/$USER/mouseless-execute /bin/
+sudo mouseless --config ~/.config/mouseless/config.yaml" > $temporary/mouseless-execute
+chmod +x $temporary/mouseless-execute
+sudo cp $temporary/mouseless-execute /usr/local/bin/
 # Removes the downloaded files
-rm /home/$USER/mouseless-execute /home/$USER/mouseless-linux-amd64.tar.gz
-rm -r /home/$USER/dist
-echo "Installation complete. Type mouseless-execute to launch the app alongside the config file. If you want to use other flags, use mouseless. If you wish do delete these entries, type sudo rm /bin/mouseless /bin/mouseless-execute."
+echo "Installation complete. Type mouseless-execute to launch the app alongside the config file. If you want to use other flags, use mouseless. If you wish do delete these entries, type sudo rm /usr/local/bin/mouseless /usr/local/bin/mouseless-execute."
