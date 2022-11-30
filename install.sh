@@ -1,19 +1,62 @@
-#!/bin/sh
+#!/bin/bash
 version=0.1.3
-# if the 1st command fails, the second will activate.
-keyboard=$(ls /dev/input/by-id/*kbd* || ls /dev/input/by-path/*kbd* | head -n1)
+keyboard1=$(ls /dev/input/by-id/*kbd*)
+keyboard2=$(ls /dev/input/by-path/*kbd* | head -n1)
 temporary=/tmp/mouseless
-# nv means no verbose
-wget -P $temporary https://github.com/jbensmann/mouseless/releases/download/v$version/mouseless-linux-amd64.tar.gz
-tar -xf $temporary/mouseless-linux-amd64.tar.gz --directory $temporary
-sudo cp $temporary/dist/mouseless /usr/local/bin/
-# copies the default config to the .config directory
-mkdir /home/$USER/.config/mouseless
-touch /home/$USER/.config/mouseless/config.yaml 
-echo "
+echo "=========================================="
+echo "Install mouseless version $version? [y/n]"
+echo "=========================================="
+read choice
+if [ "$choice" == "y" ];
+then 
+	echo "Installing."
+	wget -P $temporary https://github.com/jbensmann/mouseless/releases/download/v$version/mouseless-linux-amd64.tar.gz
+	tar -xf $temporary/mouseless-linux-amd64.tar.gz --directory $temporary
+	# removes the old version
+	sudo rm /usr/local/bin/mouseless
+	sudo cp $temporary/dist/mouseless /usr/local/bin/
+else
+	
+echo "=========================================="
+	echo "Skipping."
+echo "=========================================="
+fi
+echo "=========================================="
+echo "Install an executable file that allows launching mouseless alongside the config file in a single command? [y/n]"
+echo "=========================================="
+read choice
+if [ "$choice" == "y" ];
+then
+	echo "Type in the command's name."
+	read scriptname
+    touch $temporary/$scriptname
+	echo "
+#!/bin/sh 
+sudo mouseless --config ~/.config/mouseless/config.yaml" > $temporary/$scriptname
+chmod +x $temporary/$scriptname
+sudo cp $temporary/$scriptname /usr/local/bin/
+else
+	
+	echo "=========================================="
+	echo "Script will NOT be installed."
+	echo "=========================================="
+fi
+
+
+
+echo "=========================================="
+echo "Create a config file? (Choose no in case you have already created one.) [y/n]"
+echo "=========================================="
+read choice
+if [ "$choice" == "y" ];
+then
+	mkdir /home/$USER/.config/mouseless
+	touch /home/$USER/.config/mouseless/config.yaml 
+	echo " 
 devices:
 # change this to a keyboard device
-- "$keyboard"
+- "$keyboard1"
+- "$keyboard2"
 # this is executed when mouseless starts
 # startCommand: ""
 # the default speed for mouse movement
@@ -69,12 +112,10 @@ layers:
     w: backspace
     r: delete
     v: enter" > /home/$USER/.config/mouseless/config.yaml 
-# Creates an entry that automatically launches mouseless with the --config flag
-touch $temporary/mouseless-execute
-echo "
-#!/bin/sh 
-sudo mouseless --config ~/.config/mouseless/config.yaml" > $temporary/mouseless-execute
-chmod +x $temporary/mouseless-execute
-sudo cp $temporary/mouseless-execute /usr/local/bin/
-# Removes the downloaded files
-echo "Installation complete. Type mouseless-execute to launch the app alongside the config file. If you want to use other flags, use mouseless. If you wish do delete these entries, type sudo rm /usr/local/bin/mouseless /usr/local/bin/mouseless-execute."
+else
+	echo "Config file will NOT be created."
+fi
+
+echo "=========================================="
+echo "Installation complete." 
+echo "=========================================="
