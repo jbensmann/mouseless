@@ -29,11 +29,12 @@ const (
 
 // RawConfig defines the structure of the config file.
 type RawConfig struct {
-	Devices         []string   `yaml:"devices"`
-	StartCommand    string     `yaml:"startCommand"`
-	BaseMouseSpeed  float64    `yaml:"baseMouseSpeed"`
-	BaseScrollSpeed float64    `yaml:"baseScrollSpeed"`
-	Layers          []RawLayer `yaml:"layers"`
+	Devices           []string   `yaml:"devices"`
+	StartCommand      string     `yaml:"startCommand"`
+	BaseMouseSpeed    float64    `yaml:"baseMouseSpeed"`
+	MouseAcceleration float64    `yaml:"mouseAcceleration"`
+	BaseScrollSpeed   float64    `yaml:"baseScrollSpeed"`
+	Layers            []RawLayer `yaml:"layers"`
 }
 
 type RawLayer struct {
@@ -44,11 +45,12 @@ type RawLayer struct {
 
 // Config is the parsed form of RawConfig.
 type Config struct {
-	Devices         []string
-	StartCommand    string
-	BaseMouseSpeed  float64
-	BaseScrollSpeed float64
-	Layers          []*Layer
+	Devices           []string
+	StartCommand      string
+	BaseMouseSpeed    float64
+	MouseAcceleration float64
+	BaseScrollSpeed   float64
+	Layers            []*Layer
 }
 
 type Layer struct {
@@ -128,6 +130,7 @@ func readConfig(fileName string) (*Config, error) {
 	config.Devices = rawConfig.Devices
 	config.StartCommand = rawConfig.StartCommand
 	config.BaseMouseSpeed = rawConfig.BaseMouseSpeed
+	config.MouseAcceleration = rawConfig.MouseAcceleration
 	config.BaseScrollSpeed = rawConfig.BaseScrollSpeed
 
 	for i, l := range rawConfig.Layers {

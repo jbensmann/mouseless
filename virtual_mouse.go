@@ -1,6 +1,8 @@
 package main
 
 import (
+	"math"
+
 	"github.com/bendahl/uinput"
 	log "github.com/sirupsen/logrus"
 )
@@ -9,6 +11,8 @@ type VirtualMouse struct {
 	uinputMouse     uinput.Mouse
 	isPressed       map[MouseButton]bool
 	triggeredKeys   map[uint16]MouseButton
+	velocityX       float64
+	velocityY       float64
 	moveFractionX   float64
 	moveFractionY   float64
 	scrollFractionX float64
@@ -96,14 +100,33 @@ func (v *VirtualMouse) Scroll(x float64, y float64) {
 	}
 }
 
-func (v *VirtualMouse) Move(x float64, y float64) {
+func moveTowards(current float64, target float64, maxDelta float64) float64 {
+	if maxDelta == 0 {
+		return target
+	}
+	if target < 0 {
+		if current > 0 {
+			return 0
+		}
+		return math.Max(current-maxDelta, target)
+	} else {
+		if current < 0 {
+			return 0
+		}
+		return math.Min(current+maxDelta, target)
+	}
+}
+
+func (v *VirtualMouse) Move(x float64, y float64, acceleration float64) {
 	// this seems to be necessary so that the speed does not change on diagonal move
 	if x != 0 && y != 0 {
 		x *= 0.546
 		y *= 0.546
 	}
-	v.moveFractionX += x
-	v.moveFractionY += y
+	v.velocityX = moveTowards(v.velocityX, x, acceleration)
+	v.velocityY = moveTowards(v.velocityY, y, acceleration)
+	v.moveFractionX += v.velocityX
+	v.moveFractionY += v.velocityY
 	// move only the integer part
 	var xInt = int32(v.moveFractionX)
 	var yInt = int32(v.moveFractionY)
@@ -116,6 +139,11 @@ func (v *VirtualMouse) Move(x float64, y float64) {
 			log.Warnf("Mouse: move failed: %v", err)
 		}
 	}
+}
+
+func (v *VirtualMouse) Stop() {
+	v.velocityX = 0
+	v.velocityY = 0
 }
 
 func (v *VirtualMouse) Close() {
