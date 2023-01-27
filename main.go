@@ -154,19 +154,16 @@ func mainLoop() {
 		}
 
 		// handle mouse movement and scrolling
-		moveSpeed := config.BaseMouseSpeed * mouseLoopInterval.Seconds()
-		scrollSpeed := config.BaseScrollSpeed * mouseLoopInterval.Seconds()
-		mouseAcceleration := config.MouseAcceleration * mouseLoopInterval.Seconds() * mouseLoopInterval.Seconds()
 		moveX := 0.0
 		moveY := 0.0
 		scrollX := 0.0
 		scrollY := 0.0
+		speedFactor := 1.0
 		for code, binding := range currentLayer.Bindings {
 			if tapHoldHandler.IsKeyPressed(code) {
 				switch t := binding.(type) {
 				case SpeedBinding:
-					moveSpeed *= t.Speed
-					scrollSpeed *= t.Speed
+					speedFactor *= t.Speed
 				case ScrollBinding:
 					scrollX += t.X
 					scrollY += t.Y
@@ -178,8 +175,12 @@ func mainLoop() {
 		}
 
 		if moveX != 0 || moveY != 0 || scrollX != 0 || scrollY != 0 {
-			mouse.Scroll(scrollX*scrollSpeed, scrollY*scrollSpeed)
-			mouse.Move(moveX*moveSpeed, moveY*moveSpeed, mouseAcceleration)
+			tickTime := mouseLoopInterval.Seconds();
+			moveSpeed := config.BaseMouseSpeed * tickTime
+			scrollSpeed := config.BaseScrollSpeed * tickTime
+			mouseAcceleration := config.MouseAcceleration * tickTime * tickTime
+			mouse.Scroll(scrollX*scrollSpeed*speedFactor, scrollY*scrollSpeed*speedFactor)
+			mouse.Move(moveX*moveSpeed, moveY*moveSpeed, config.MouseStartSpeed, mouseAcceleration, speedFactor)
 			mouseTimer = time.NewTimer(mouseLoopInterval)
 		} else {
 			mouse.Stop()

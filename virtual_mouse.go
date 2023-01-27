@@ -100,33 +100,33 @@ func (v *VirtualMouse) Scroll(x float64, y float64) {
 	}
 }
 
-func moveTowards(current float64, target float64, maxDelta float64) float64 {
+func moveTowards(current float64, target float64, maxDelta float64, start float64) float64 {
 	if maxDelta == 0 {
 		return target
 	}
 	if target < 0 {
-		if current > 0 {
-			return 0
+		if current >= 0 {
+			current = -start
 		}
 		return math.Max(current-maxDelta, target)
 	} else {
-		if current < 0 {
-			return 0
+		if current <= 0 {
+			current = start
 		}
 		return math.Min(current+maxDelta, target)
 	}
 }
 
-func (v *VirtualMouse) Move(x float64, y float64, acceleration float64) {
+func (v *VirtualMouse) Move(x float64, y float64, mouseStartSpeed float64, acceleration float64, speedFactor float64) {
 	// this seems to be necessary so that the speed does not change on diagonal move
 	if x != 0 && y != 0 {
 		x *= 0.546
 		y *= 0.546
 	}
-	v.velocityX = moveTowards(v.velocityX, x, acceleration)
-	v.velocityY = moveTowards(v.velocityY, y, acceleration)
-	v.moveFractionX += v.velocityX
-	v.moveFractionY += v.velocityY
+	v.velocityX = moveTowards(v.velocityX, x, acceleration, mouseStartSpeed)
+	v.velocityY = moveTowards(v.velocityY, y, acceleration, mouseStartSpeed)
+	v.moveFractionX += v.velocityX * speedFactor
+	v.moveFractionY += v.velocityY * speedFactor
 	// move only the integer part
 	var xInt = int32(v.moveFractionX)
 	var yInt = int32(v.moveFractionY)
