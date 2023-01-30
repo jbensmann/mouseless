@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"math"
 	"strconv"
 	"strings"
 
@@ -34,6 +35,7 @@ type RawConfig struct {
 	BaseMouseSpeed    float64    `yaml:"baseMouseSpeed"`
 	MouseStartSpeed   float64    `yaml:"mouseStartSpeed"`
 	MouseAcceleration float64    `yaml:"mouseAcceleration"`
+	MouseDeceleration float64    `yaml:"mouseDeceleration"`
 	BaseScrollSpeed   float64    `yaml:"baseScrollSpeed"`
 	Layers            []RawLayer `yaml:"layers"`
 }
@@ -50,6 +52,7 @@ type Config struct {
 	StartCommand      string
 	BaseMouseSpeed    float64
 	MouseAcceleration float64
+	MouseDeceleration float64
 	MouseStartSpeed   float64
 	BaseScrollSpeed   float64
 	Layers            []*Layer
@@ -128,11 +131,19 @@ func readConfig(fileName string) (*Config, error) {
 		return nil, err
 	}
 
-	config := Config{}
+	config := Config{
+		MouseAcceleration: math.Inf(1),
+		MouseDeceleration: math.Inf(1),
+	}
 	config.Devices = rawConfig.Devices
 	config.StartCommand = rawConfig.StartCommand
 	config.BaseMouseSpeed = rawConfig.BaseMouseSpeed
-	config.MouseAcceleration = rawConfig.MouseAcceleration
+	if rawConfig.MouseAcceleration > 0 {
+		config.MouseAcceleration = rawConfig.MouseAcceleration
+	}
+	if rawConfig.MouseDeceleration > 0 {
+		config.MouseDeceleration = rawConfig.MouseDeceleration
+	}
 	config.MouseStartSpeed = rawConfig.MouseStartSpeed
 	config.BaseScrollSpeed = rawConfig.BaseScrollSpeed
 

@@ -100,31 +100,28 @@ func (v *VirtualMouse) Scroll(x float64, y float64) {
 	}
 }
 
-func moveTowards(current float64, target float64, maxDelta float64, start float64) float64 {
-	if maxDelta == 0 {
-		return target
+func moveTowards(current float64, target float64, maxIncrease float64, maxDecrease float64, start float64) float64 {
+	if target < 0 || (target == 0 && current < 0) {
+		return -moveTowards(-current, -target, maxIncrease, maxDecrease, start)
 	}
-	if target < 0 {
-		if current >= 0 {
-			current = -start
-		}
-		return math.Max(current-maxDelta, target)
+	if current <= 0 && target > 0 {
+		current = start
+	}
+	if current < target {
+		return math.Min(current+maxIncrease, target)
 	} else {
-		if current <= 0 {
-			current = start
-		}
-		return math.Min(current+maxDelta, target)
+		return math.Max(current-maxDecrease, target)
 	}
 }
 
-func (v *VirtualMouse) Move(x float64, y float64, mouseStartSpeed float64, acceleration float64, speedFactor float64) {
+func (v *VirtualMouse) Move(x float64, y float64, mouseStartSpeed float64, acceleration float64, deceleration float64, speedFactor float64) {
 	// this seems to be necessary so that the speed does not change on diagonal move
 	if x != 0 && y != 0 {
 		x *= 0.546
 		y *= 0.546
 	}
-	v.velocityX = moveTowards(v.velocityX, x, acceleration, mouseStartSpeed)
-	v.velocityY = moveTowards(v.velocityY, y, acceleration, mouseStartSpeed)
+	v.velocityX = moveTowards(v.velocityX, x, acceleration, deceleration, mouseStartSpeed)
+	v.velocityY = moveTowards(v.velocityY, y, acceleration, deceleration, mouseStartSpeed)
 	v.moveFractionX += v.velocityX * speedFactor
 	v.moveFractionY += v.velocityY * speedFactor
 	// move only the integer part
@@ -141,9 +138,8 @@ func (v *VirtualMouse) Move(x float64, y float64, mouseStartSpeed float64, accel
 	}
 }
 
-func (v *VirtualMouse) Stop() {
-	v.velocityX = 0
-	v.velocityY = 0
+func (v *VirtualMouse) IsMoving() bool {
+	return v.velocityX != 0 || v.velocityY != 0
 }
 
 func (v *VirtualMouse) Close() {
