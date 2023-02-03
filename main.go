@@ -181,7 +181,7 @@ func mainLoop() {
 			mouseAcceleration := config.MouseAcceleration * tickTime * tickTime
 			mouseDeceleration := config.MouseDeceleration * tickTime * tickTime
 			mouse.Scroll(scrollX*scrollSpeed*speedFactor, scrollY*scrollSpeed*speedFactor)
-			mouse.Move(moveX*moveSpeed, moveY*moveSpeed, config.MouseStartSpeed, mouseAcceleration, mouseDeceleration, speedFactor)
+			mouse.Move(moveX*moveSpeed, moveY*moveSpeed, config.MouseStartSpeed*tickTime, mouseAcceleration, mouseDeceleration, speedFactor)
 			mouseTimer = time.NewTimer(mouseLoopInterval)
 		} else {
 			mouseTimer = time.NewTimer(math.MaxInt64)
