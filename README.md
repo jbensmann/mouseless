@@ -70,6 +70,12 @@ devices:
 # startCommand: ""
 # the default speed for mouse movement
 baseMouseSpeed: 750.0
+# speed of the mouse when it starts moving
+mouseStartSpeed: 1.5
+# how quickly the mouse accelerates up to baseMouseSpeed
+mouseAcceleration: 800.0
+# how quickly the mouse slows down
+mouseDeceleration: 2000.0
 # the default speed for scrolling
 baseScrollSpeed: 20.0
 layers:
