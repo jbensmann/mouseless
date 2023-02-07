@@ -176,10 +176,11 @@ func mainLoop() {
 
 		if moveX != 0 || moveY != 0 || scrollX != 0 || scrollY != 0 || mouse.IsMoving() {
 			tickTime := mouseLoopInterval.Seconds()
+			tickTimeSq := tickTime * tickTime
 			moveSpeed := config.BaseMouseSpeed * tickTime
 			scrollSpeed := config.BaseScrollSpeed * tickTime
-			mouseAcceleration := config.MouseAcceleration * tickTime * tickTime
-			mouseDeceleration := config.MouseDeceleration * tickTime * tickTime
+			mouseAcceleration := (config.BaseMouseSpeed - config.StartMouseSpeed) * 1000 / config.MouseAccelerationTime * tickTimeSq
+			mouseDeceleration := config.MouseDeceleration * tickTimeSq
 			mouse.Scroll(scrollX*scrollSpeed*speedFactor, scrollY*scrollSpeed*speedFactor)
 			mouse.Move(moveX*moveSpeed, moveY*moveSpeed, config.StartMouseSpeed*tickTime, mouseAcceleration, mouseDeceleration, speedFactor)
 			mouseTimer = time.NewTimer(mouseLoopInterval)

@@ -72,8 +72,8 @@ devices:
 baseMouseSpeed: 750.0
 # speed of the mouse when it starts moving
 startMouseSpeed: 75.0
-# how quickly the mouse accelerates up to baseMouseSpeed
-mouseAcceleration: 800.0
+# how many milliseconds for the mouse to accelerate up to baseMouseSpeed; 0 to reach top speed immediately
+mouseAccelerationTime: 100.0
 # how quickly the mouse slows down
 mouseDeceleration: 2000.0
 # the default speed for scrolling

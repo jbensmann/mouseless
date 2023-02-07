@@ -30,14 +30,14 @@ const (
 
 // RawConfig defines the structure of the config file.
 type RawConfig struct {
-	Devices           []string   `yaml:"devices"`
-	StartCommand      string     `yaml:"startCommand"`
-	BaseMouseSpeed    float64    `yaml:"baseMouseSpeed"`
-	StartMouseSpeed   float64    `yaml:"startMouseSpeed"`
-	MouseAcceleration float64    `yaml:"mouseAcceleration"`
-	MouseDeceleration float64    `yaml:"mouseDeceleration"`
-	BaseScrollSpeed   float64    `yaml:"baseScrollSpeed"`
-	Layers            []RawLayer `yaml:"layers"`
+	Devices               []string   `yaml:"devices"`
+	StartCommand          string     `yaml:"startCommand"`
+	BaseMouseSpeed        float64    `yaml:"baseMouseSpeed"`
+	StartMouseSpeed       float64    `yaml:"startMouseSpeed"`
+	MouseAccelerationTime float64    `yaml:"mouseAccelerationTime"`
+	MouseDeceleration     float64    `yaml:"mouseDeceleration"`
+	BaseScrollSpeed       float64    `yaml:"baseScrollSpeed"`
+	Layers                []RawLayer `yaml:"layers"`
 }
 
 type RawLayer struct {
@@ -48,14 +48,14 @@ type RawLayer struct {
 
 // Config is the parsed form of RawConfig.
 type Config struct {
-	Devices           []string
-	StartCommand      string
-	BaseMouseSpeed    float64
-	MouseAcceleration float64
-	MouseDeceleration float64
-	StartMouseSpeed   float64
-	BaseScrollSpeed   float64
-	Layers            []*Layer
+	Devices               []string
+	StartCommand          string
+	BaseMouseSpeed        float64
+	MouseAccelerationTime float64
+	MouseDeceleration     float64
+	StartMouseSpeed       float64
+	BaseScrollSpeed       float64
+	Layers                []*Layer
 }
 
 type Layer struct {
@@ -132,15 +132,12 @@ func readConfig(fileName string) (*Config, error) {
 	}
 
 	config := Config{
-		MouseAcceleration: math.Inf(1),
 		MouseDeceleration: math.Inf(1),
 	}
 	config.Devices = rawConfig.Devices
 	config.StartCommand = rawConfig.StartCommand
 	config.BaseMouseSpeed = rawConfig.BaseMouseSpeed
-	if rawConfig.MouseAcceleration > 0 {
-		config.MouseAcceleration = rawConfig.MouseAcceleration
-	}
+	config.MouseAccelerationTime = rawConfig.MouseAccelerationTime
 	if rawConfig.MouseDeceleration > 0 {
 		config.MouseDeceleration = rawConfig.MouseDeceleration
 	}
