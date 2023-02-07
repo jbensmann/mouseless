@@ -33,7 +33,7 @@ type RawConfig struct {
 	Devices           []string   `yaml:"devices"`
 	StartCommand      string     `yaml:"startCommand"`
 	BaseMouseSpeed    float64    `yaml:"baseMouseSpeed"`
-	MouseStartSpeed   float64    `yaml:"mouseStartSpeed"`
+	StartMouseSpeed   float64    `yaml:"startMouseSpeed"`
 	MouseAcceleration float64    `yaml:"mouseAcceleration"`
 	MouseDeceleration float64    `yaml:"mouseDeceleration"`
 	BaseScrollSpeed   float64    `yaml:"baseScrollSpeed"`
@@ -53,7 +53,7 @@ type Config struct {
 	BaseMouseSpeed    float64
 	MouseAcceleration float64
 	MouseDeceleration float64
-	MouseStartSpeed   float64
+	StartMouseSpeed   float64
 	BaseScrollSpeed   float64
 	Layers            []*Layer
 }
@@ -144,7 +144,7 @@ func readConfig(fileName string) (*Config, error) {
 	if rawConfig.MouseDeceleration > 0 {
 		config.MouseDeceleration = rawConfig.MouseDeceleration
 	}
-	config.MouseStartSpeed = rawConfig.MouseStartSpeed
+	config.StartMouseSpeed = rawConfig.StartMouseSpeed
 	config.BaseScrollSpeed = rawConfig.BaseScrollSpeed
 
 	for i, l := range rawConfig.Layers {

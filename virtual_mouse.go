@@ -114,14 +114,14 @@ func moveTowards(current float64, target float64, maxIncrease float64, maxDecrea
 	}
 }
 
-func (v *VirtualMouse) Move(x float64, y float64, mouseStartSpeed float64, acceleration float64, deceleration float64, speedFactor float64) {
+func (v *VirtualMouse) Move(x float64, y float64, startMouseSpeed float64, acceleration float64, deceleration float64, speedFactor float64) {
 	// this seems to be necessary so that the speed does not change on diagonal move
 	if x != 0 && y != 0 {
 		x *= 0.546
 		y *= 0.546
 	}
-	v.velocityX = moveTowards(v.velocityX, x, acceleration, deceleration, mouseStartSpeed)
-	v.velocityY = moveTowards(v.velocityY, y, acceleration, deceleration, mouseStartSpeed)
+	v.velocityX = moveTowards(v.velocityX, x, acceleration, deceleration, startMouseSpeed)
+	v.velocityY = moveTowards(v.velocityY, y, acceleration, deceleration, startMouseSpeed)
 	v.moveFractionX += v.velocityX * speedFactor
 	v.moveFractionY += v.velocityY * speedFactor
 	// move only the integer part
