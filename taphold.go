@@ -71,8 +71,7 @@ func (t *TapHoldHandler) handleKey(event KeyboardEvent) {
 	if event.isPress {
 		// tapHold key pressed?
 		if binding, ok := currentLayer.Bindings[event.code].(TapHoldBinding); ok {
-			// activate holdBack only when no other key is pressed
-			if !t.isAnyKeyPressed() && !t.isHoldBack {
+			if !t.isHoldBack {
 				log.Debugf("Activating holdBack")
 				t.isHoldBack = true
 				t.tapHoldEvent = &event
@@ -122,9 +121,13 @@ func (t *TapHoldHandler) handleKey(event KeyboardEvent) {
 
 	// send to out channel or to holdBackEvents
 	holdBack := t.isHoldBack || previousIsHoldingBack
-	// do not hold back if the key pressed before tap started to avoid unwanted key repetitions
+	// do not hold back key release if the press was before tap started to avoid unwanted key repetitions
 	if _, ok := t.holdBackStartIsPressed[event.code]; ok {
-		holdBack = false
+		if !event.isPress {
+			holdBack = false
+		} else {
+			delete(t.holdBackStartIsPressed, event.code)
+		}
 	}
 	if holdBack {
 		log.Debugf("tapHold: putting event back to queue")
@@ -150,12 +153,6 @@ func (t *TapHoldHandler) IsKeyPressed(code uint16) bool {
 	defer t.isPressedLock.RUnlock()
 	pr, ok := t.isPressed[code]
 	return ok && pr
-}
-
-func (t *TapHoldHandler) isAnyKeyPressed() bool {
-	t.isPressedLock.RLock()
-	defer t.isPressedLock.RUnlock()
-	return len(t.isPressed) > 0
 }
 
 func (t *TapHoldHandler) setKeyPressed(code uint16, pressed bool) {

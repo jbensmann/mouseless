@@ -18,10 +18,11 @@ minor issues.
 
 There are various reasons why one would want to control the mouse with the keyboard:
 
-- you do not want to leave the keyboard
+- keep your hands on the keyboard
 - laptop with no or a poor touchpad
 - no mouse at hand
 - cannot use a mouse for some reason
+- precise control
 - for fun
 
 Of course, it would be best to avoid using the mouse pointer at all, e.g. with the use of tiling window managers and
@@ -50,7 +51,7 @@ ls /dev/input/by-id/*kbd*
 ls /dev/input/by-path/*kbd*
 ```
 
-After that, you can run mouseless like this.
+After that, you can run mouseless like this:
 
 ```shell
 sudo mouseless --config ~/.config/mouseless/config.yaml
@@ -60,6 +61,8 @@ For troubleshooting, you can use the --debug flag to show more verbose log messa
 
 ## Configuration
 
+The format of the configuration file is YAML, you do not have to know what exactly that is, just take care
+that the indentation level of the lines is correct. Lines starting with a `#` are comments.
 Here is a small example that illustrates the most features:
 
 ```yaml
@@ -67,7 +70,7 @@ devices:
 # change this to a keyboard device
 - "/dev/input/by-id/SOME_KEYBOARD_REPLACE_ME-event-kbd"
 # this is executed when mouseless starts
-startCommand: "setxkbmap en"
+# startCommand: ""
 # the default speed for mouse movement
 baseMouseSpeed: 750.0
 # the default speed for scrolling
@@ -76,9 +79,9 @@ layers:
 # the first layer is active at start
 - name: initial
   bindings:
-    # when tab is holt and another key pressed, activate mouse layer
+    # when tab is held and another key pressed, activate mouse layer
     tab: tap-hold-next tab ; toggle-layer mouse ; 500
-    # when a is holt for 300ms, activate mouse layer
+    # when a is held for 300ms, activate mouse layer
     a: tap-hold a ; toggle-layer mouse ; 300
     # right alt key toggles arrows layer
     rightalt: toggle-layer arrows
@@ -122,6 +125,43 @@ layers:
     r: delete
     v: enter
 ```
+
+One can define an arbitrary number of layers, each with an arbitrary number of bindings, e.g. `esc: capslock`
+which maps the escape key to capslock. If you do not know the name of a key, you can start mouseless with the
+--debug flag, press the key and look for an output like `Pressed:  rightalt (100)`, which tells you that the name of the
+key is `rightalt`. Alternatively you can also use the keycode in the parentheses, which is 100 in this case. Note that
+the name of a key does not necessarily match what is printed on your keyboard, e.g. with a German layout where the `y`
+and `z` keys are swapped in comparison to the English layout, but the name of the `z` key is `y` and vice versa.
+
+One can also map a key to multiple ones like `a: leftshift+k1` which results in `!`, at least for an English or German
+layout.
+
+Aside from remapping keys, there are a bunch of other actions available, e.g. `rightalt: toggle-layer arrows`, which
+jumps to the arrows layer when rightalt is pressed and jumps back on release. These are all available actions:
+
+| action                 | examples                                  | meaning                                                                   |
+|------------------------|-------------------------------------------|---------------------------------------------------------------------------|
+| `<key-combo>`          | `a`, `comma`, `shift+a`                   | maps to the key (combo)                                                   |
+| `layer <layer>`        | `layer mouse`                             | switches to the layer with the given name                                 |
+| `toggle-layer <layer>` | `toggle-layer mouse`                      | switches to the layer with the given name while the mapped key is pressed |
+| `move <x> <y>`         | `move 1 0`                                | moves the pointer into the given direction                                |
+| `scroll <direction>`   | `scroll up`                               | scrolls up or down                                                        |
+| `speed <multiplier>`   | `speed 2.5`                               | multiplies the pointer and scroll speeds with the given value             |
+| `button <button>`      | `button left`                             | presses a mouse button (left, right or middle)                            |
+| `exec <cmd>`           | `exec notify-send "hello from mouseless"` | executes the given command (the example sends a desktop notification)     |
+| `reload-config`        | `reload-config`                           | reloads the configuration file                                            |
+
+With these actions one could e.g. toggle the mouse layer with `tab: toggle-layer mouse`, so that all bindings from the
+mouse layer are available while `tab` is held down. However, this sacrifices the `tab` key which might not be desirable.
+For these cases there are some "meta actions" which allow to put multiple actions on a single key and which are inspired
+by KMonad. The arguments of those actions have to be separated with `;`.
+
+| meta action                                                    | example                                            | meaning                                                                                                                       |
+|----------------------------------------------------------------|----------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| `tap-hold <tap action>; <hold action>; <timeout>`              | `tap-hold a; toggle-layer mouse; 300`              | when the mapped key is pressed and released within 300ms, presses a, otherwise toggles the mouse layer                        |
+| `tap-hold-next <tap action>; <hold action>; <timeout>`         | `tap-hold-next a; toggle-layer mouse; 300`         | same as tap-hold, with the addition that the tap action is executed when another key is pressed while `a` is still held down  |
+| `tap-hold-next-release <tap action>; <hold action>; <timeout>` | `tap-hold-next-release a; toggle-layer mouse; 300` | same as tap-hold, with the addition that the tap action is executed when another key is released while `a` is still held down |
+| `multi <action1>; <action2>`                                   | `multi a; toggle-layer mouse`                      | executes both actions                                                                                                         |
 
 ## Run without root privileges
 
