@@ -61,8 +61,6 @@ func main() {
 		log.SetLevel(log.InfoLevel)
 	}
 
-	deviceNames := listKeyboardDevices()
-
 	// if no config file is given, use the default one
 	configFile = opts.ConfigFile
 	if configFile == "" {
@@ -75,6 +73,26 @@ func main() {
 
 	log.Debugf("Using config file: %s", configFile)
 	loadConfig()
+
+	detectedKeyboardDevices := findKeyboardDevices()
+
+	// check if another instance of mouse is already running
+	for _, device := range detectedKeyboardDevices {
+		if device.Name == "mouseless" {
+			exitError(nil, "Found a keyboard device with name mouseless, "+
+				"which probably means that another instance of mouseless is already running")
+		}
+	}
+
+	// if no devices are specified, use the detected ones
+	if len(config.Devices) == 0 {
+		for _, device := range findKeyboardDevices() {
+			config.Devices = append(config.Devices, device.Fn)
+		}
+		if len(config.Devices) == 0 {
+			exitError(nil, "No keyboard devices found")
+		}
+	}
 
 	// init virtual mouse and keyboard
 	mouse, err = NewVirtualMouse()
@@ -92,7 +110,7 @@ func main() {
 	tapHoldHandler = NewTapHoldHandler()
 
 	// init keyboard devices
-	for _, dev := range deviceNames {
+	for _, dev := range config.Devices {
 		kd := NewKeyboardDevice(dev, tapHoldHandler.InChannel())
 		keyboardDevices = append(keyboardDevices, kd)
 		go kd.ReadLoop()
@@ -290,18 +308,32 @@ func executeBinding(event *KeyboardEvent, binding interface{}) {
 	}
 }
 
-// listKeyboardDevices lists all available keyboard input devices.
-func listKeyboardDevices() []string {
-	var deviceNames []string
-	devices, _ := evdev.ListInputDevices("/dev/input/by-path/*kbd*")
-	devices2, _ := evdev.ListInputDevices("/dev/input/by-id/*kbd*")
-	devices = append(devices, devices2...)
-	log.Debugf("Available keyboard devices:")
+// findKeyboardDevices finds all available keyboard input devices.
+func findKeyboardDevices() []*evdev.InputDevice {
+	var devices []*evdev.InputDevice
+	devices, _ = evdev.ListInputDevices("/dev/input/event*")
+
+	// filter out the keyboard devices that have at least an A key or a 1 key
+	var keyboardDevices []*evdev.InputDevice
 	for _, dev := range devices {
-		log.Debugf("%s %s %s\n", dev.Fn, dev.Name, dev.Phys)
-		deviceNames = append(deviceNames, dev.Fn)
+		for capType, codes := range dev.Capabilities {
+			if capType.Type == evdev.EV_KEY {
+				for _, code := range codes {
+					if code.Code == evdev.KEY_A || code.Code == evdev.KEY_KP1 {
+						keyboardDevices = append(keyboardDevices, dev)
+						break
+					}
+				}
+			}
+		}
 	}
-	return deviceNames
+
+	// print the keyboard devices
+	log.Debugf("Auto detected keyboard devices:")
+	for _, dev := range keyboardDevices {
+		log.Debugf("- %s: %s\n", dev.Fn, dev.Name)
+	}
+	return keyboardDevices
 }
 
 func exitError(err error, msg string) {
@@ -310,5 +342,6 @@ func exitError(err error, msg string) {
 	} else {
 		log.Error(msg)
 	}
+	log.Error("Exiting")
 	os.Exit(1)
 }
