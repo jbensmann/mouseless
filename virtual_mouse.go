@@ -1,6 +1,8 @@
 package main
 
 import (
+	"math"
+
 	"github.com/bendahl/uinput"
 	log "github.com/sirupsen/logrus"
 )
@@ -9,6 +11,8 @@ type VirtualMouse struct {
 	uinputMouse     uinput.Mouse
 	isPressed       map[MouseButton]bool
 	triggeredKeys   map[uint16]MouseButton
+	velocityX       float64
+	velocityY       float64
 	moveFractionX   float64
 	moveFractionY   float64
 	scrollFractionX float64
@@ -96,14 +100,44 @@ func (v *VirtualMouse) Scroll(x float64, y float64) {
 	}
 }
 
-func (v *VirtualMouse) Move(x float64, y float64) {
-	// this seems to be necessary so that the speed does not change on diagonal move
-	if x != 0 && y != 0 {
-		x *= 0.546
-		y *= 0.546
+func moveTowards(
+	current float64,
+	target float64,
+	max float64,
+	start float64,
+	accelerationCurve float64,
+	accelerationStep float64,
+	decelerationCurve float64,
+	decelerationStep float64,
+) float64 {
+	if target < 0 || (target == 0 && current < 0) {
+		return -moveTowards(-current, -target, max, start, accelerationCurve, accelerationStep, decelerationCurve, decelerationStep)
 	}
-	v.moveFractionX += x
-	v.moveFractionY += y
+	if current <= 0 && target > 0 {
+		current = start
+	}
+	if current < target {
+		t := math.Pow(current/max, 1/accelerationCurve) + accelerationStep
+		return math.Min(target, target*math.Pow(t, accelerationCurve))
+	} else {
+		t := math.Pow(current/max, 1/decelerationCurve) - decelerationStep
+		if t <= 0.0 {
+			return target
+		}
+		return math.Max(target, max*(math.Pow(t, decelerationCurve)))
+	}
+}
+
+func (v *VirtualMouse) Move(
+	x float64, y float64, startMouseSpeed float64, maxMouseSpeed float64,
+	accelerationCurve float64, accelerationStep float64,
+	decelerationCurve float64, decelerationStep float64,
+	speedFactor float64,
+) {
+	v.velocityX = moveTowards(v.velocityX, x, maxMouseSpeed, startMouseSpeed, accelerationCurve, accelerationStep, decelerationCurve, decelerationStep)
+	v.velocityY = moveTowards(v.velocityY, y, maxMouseSpeed, startMouseSpeed, accelerationCurve, accelerationStep, decelerationCurve, decelerationStep)
+	v.moveFractionX += v.velocityX * speedFactor
+	v.moveFractionY += v.velocityY * speedFactor
 	// move only the integer part
 	var xInt = int32(v.moveFractionX)
 	var yInt = int32(v.moveFractionY)
@@ -116,6 +150,10 @@ func (v *VirtualMouse) Move(x float64, y float64) {
 			log.Warnf("Mouse: move failed: %v", err)
 		}
 	}
+}
+
+func (v *VirtualMouse) IsMoving() bool {
+	return v.velocityX != 0 || v.velocityY != 0
 }
 
 func (v *VirtualMouse) Close() {
