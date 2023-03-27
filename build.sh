@@ -9,7 +9,7 @@ for i in $targets; do
     os=$1
     arch=$2
     echo "building $os:$arch"
-    GOOS=$os GOARCH=$arch go build -ldflags="-extldflags=-static" -o dist/mouseless .
+    GOOS=$os GOARCH=$arch go build -ldflags "-s -w" -o dist/mouseless .
     if [ $? != 0 ]; then
         exit 1
     fi
