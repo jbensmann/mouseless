@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 
@@ -78,8 +78,7 @@ func (b BaseBinding) binding() {}
 
 type MultiBinding struct {
 	BaseBinding
-	Binding1 Binding
-	Binding2 Binding
+	Bindings []Binding
 }
 
 type TapHoldBinding struct {
@@ -168,7 +167,7 @@ func readConfig(fileName string) (*Config, error) {
 func readRawConfig(fileName string) (*RawConfig, error) {
 	var rawConfig RawConfig
 
-	file, err := ioutil.ReadFile(fileName)
+	file, err := os.ReadFile(fileName)
 	if err != nil {
 		return nil, err
 	}
@@ -217,6 +216,9 @@ func parseLayer(rawLayer RawLayer) (*Layer, error) {
 
 // parseBinding parses a single binding of a layer.
 func parseBinding(rawBinding string) (binding Binding, err error) {
+	if len(rawBinding) == 0 {
+		return nil, fmt.Errorf("binding is empty")
+	}
 	spaceSplit := strings.Fields(rawBinding)
 	action := strings.TrimSpace(spaceSplit[0])
 	argString := strings.TrimSpace(strings.Replace(rawBinding, action, "", 1))
@@ -235,18 +237,18 @@ func parseBinding(rawBinding string) (binding Binding, err error) {
 	switch action {
 	case string(ActionMulti):
 		metaArgs := strings.Split(argString, ";")
-		if len(metaArgs) != 2 {
-			return nil, fmt.Errorf("action requires exactly two meta arguments (separated by ;)")
+		if len(metaArgs) < 2 {
+			return nil, fmt.Errorf("action requires at least two meta arguments (separated by ;)")
 		}
-		b1, err := parseBinding(metaArgs[0])
-		if err != nil {
-			return nil, err
+		multiBinding := MultiBinding{}
+		for _, arg := range metaArgs {
+			b, err := parseBinding(arg)
+			if err != nil {
+				return nil, err
+			}
+			multiBinding.Bindings = append(multiBinding.Bindings, b)
 		}
-		b2, err := parseBinding(metaArgs[1])
-		if err != nil {
-			return nil, err
-		}
-		binding = MultiBinding{Binding1: b1, Binding2: b2}
+		binding = multiBinding
 	case string(ActionTapHold):
 		tapHoldBinding, err := parseTapHoldBinding(argString)
 		if err != nil {

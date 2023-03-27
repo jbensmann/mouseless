@@ -27,7 +27,7 @@ func NewVirtualKeyboard() (*VirtualKeyboard, error) {
 }
 
 func (v *VirtualKeyboard) PressKeys(triggeredByKey uint16, codes []uint16) {
-	v.triggeredKeys[triggeredByKey] = codes
+	v.triggeredKeys[triggeredByKey] = append(v.triggeredKeys[triggeredByKey], codes...)
 	// release previous modifiers
 	for c := range v.pressedModifiers {
 		v.releaseKey(c)

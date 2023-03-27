@@ -258,8 +258,9 @@ func executeBinding(event *KeyboardEvent, binding interface{}) {
 
 	switch t := binding.(type) {
 	case MultiBinding:
-		executeBinding(event, t.Binding1)
-		executeBinding(event, t.Binding2)
+		for _, b := range t.Bindings {
+			executeBinding(event, b)
+		}
 	case TapHoldBinding:
 		if event.holdKey {
 			executeBinding(event, t.HoldBinding)
