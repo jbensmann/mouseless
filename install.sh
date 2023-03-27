@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-version=0.1.3
+version=0.1.4
 temporary=/tmp/mouseless
 
 echo "=========================================="
