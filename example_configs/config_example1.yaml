@@ -1,12 +1,25 @@
-devices: 
-# change this to a keyboard device
-- "/dev/input/by-id/SOME_KEYBOARD_REPLACE_ME-event-kbd"
-# this is executed when mouseless starts
-# startCommand: ""
-# the default speed for mouse movement
+# the keyboard devices it reads from, if no devices are specified, it reads from all
+devices:
+# - "/dev/input/by-id/SOME_KEYBOARD_REPLACE_ME-event-kbd"
+
+# this is executed when mouseless starts, e.g. useful for setting the keyboard layout
+# startCommand: "setxkbmap de"
+
+# the default speed for mouse movement and scrolling
 baseMouseSpeed: 750.0
-# the default speed for scrolling
 baseScrollSpeed: 20.0
+
+# the time it takes to accelerate to baseMouseSpeed (in ms), 0 to reach top speed immediately
+mouseAccelerationTime: 200.0
+# the shape of the acceleration curve, 1.0 is linear, higher values have more time at low speeds
+mouseAccelerationCurve: 2.0
+# speed of the mouse when it starts moving
+startMouseSpeed: 0.0
+# same for deceleration
+mouseDecelerationTime: 300.0
+mouseDecelerationCurve: 3.0
+
+# the rest of the config defines the layers with their bindings
 layers:
 # the first layer is active at start
 - name: initial
@@ -56,4 +69,3 @@ layers:
     w: backspace
     r: delete
     v: enter
-

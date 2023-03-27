@@ -3,7 +3,7 @@
 This program allows you to control the mouse pointer in Linux with the keyboard. It works in all Linux distributions,
 even those running with Wayland.
 
-mouseless is the successor of [xmouseless](https://github.com/jbensmann/xmouseless), which depended on X11 and had some
+It is the successor of [xmouseless](https://github.com/jbensmann/xmouseless), which depended on X11 and had some
 minor issues.
 
 ## Features
@@ -25,9 +25,6 @@ There are various reasons why one would want to control the mouse with the keybo
 - precise control
 - for fun
 
-Of course, it would be best to avoid using the mouse pointer at all, e.g. with the use of tiling window managers and
-application shortcuts, but sometimes there is no way around.
-
 ## Installation
 
 The simplest way is to download a binary from [Releases](https://github.com/jbensmann/mouseless/releases).
@@ -42,16 +39,9 @@ When successful, a binary with name `mouseless` will pop out.
 
 ## Usage
 
-First you need to create a config file, e.g. `~/.config/mouseless/config.yaml`, see below for an example. In there, you
-have to specify the keyboard device that mouseless should read from, you can e.g. use these commands to find possible
-candidates:
+First you need to create a config file, e.g. `~/.config/mouseless/config.yaml`, see below for an example.
 
-```shell
-ls /dev/input/by-id/*kbd*
-ls /dev/input/by-path/*kbd*
-```
-
-After that, you can run mouseless like this:
+Then you can run mouseless like this:
 
 ```shell
 sudo mouseless --config ~/.config/mouseless/config.yaml
@@ -66,25 +56,28 @@ that the indentation level of the lines is correct. Lines starting with a `#` ar
 Here is a small example that illustrates the most features:
 
 ```yaml
+# the keyboard devices it reads from, if no devices are specified, it reads from all
 devices:
-# change this to a keyboard device
-- "/dev/input/by-id/SOME_KEYBOARD_REPLACE_ME-event-kbd"
-# this is executed when mouseless starts
-# startCommand: ""
-# the default speed for mouse movement
+# - "/dev/input/by-id/SOME_KEYBOARD_REPLACE_ME-event-kbd"
+
+# this is executed when mouseless starts, e.g. useful for setting the keyboard layout
+# startCommand: "setxkbmap de"
+
+# the default speed for mouse movement and scrolling
 baseMouseSpeed: 750.0
-# speed of the mouse when it starts moving
-startMouseSpeed: 75.0
-# The shape of the mouse's acceleration curve
-mouseAccelerationCurve: 2.0
-# how many milliseconds for the mouse to accelerate up to baseMouseSpeed; 0 to reach top speed immediately
-mouseAccelerationTime: 100.0
-# The shape of the mouse's deceleration curve
-mouseDecelerationCurve: 3.0
-# How long it takes for the mouse to slow down and stop from baseMouseSpeed
-mouseDecelerationTime: 300.0
-# the default speed for scrolling
 baseScrollSpeed: 20.0
+
+# the time it takes to accelerate to baseMouseSpeed (in ms), 0 to reach top speed immediately
+mouseAccelerationTime: 200.0
+# the shape of the acceleration curve, 1.0 is linear, higher values have more time at low speeds
+mouseAccelerationCurve: 2.0
+# speed of the mouse when it starts moving
+startMouseSpeed: 0.0
+# same for deceleration
+mouseDecelerationTime: 300.0
+mouseDecelerationCurve: 3.0
+
+# the rest of the config defines the layers with their bindings
 layers:
 # the first layer is active at start
 - name: initial
@@ -172,6 +165,16 @@ by KMonad. The arguments of those actions have to be separated with `;`.
 | `tap-hold-next <tap action>; <hold action>; <timeout>`         | `tap-hold-next a; toggle-layer mouse; 300`         | same as tap-hold, with the addition that the tap action is executed when another key is pressed while `a` is still held down  |
 | `tap-hold-next-release <tap action>; <hold action>; <timeout>` | `tap-hold-next-release a; toggle-layer mouse; 300` | same as tap-hold, with the addition that the tap action is executed when another key is released while `a` is still held down |
 | `multi <action1>; <action2>`                                   | `multi a; toggle-layer mouse`                      | executes both actions                                                                                                         |
+
+## Custom devices
+
+If you don't want mouseless to read from all keyboards, you can specify one or more devices in the configuration file.
+Most devices have `kbd` in their name, so you can use the following commands to find possible candidates:
+
+```shell
+ls /dev/input/by-id/*kbd*
+ls /dev/input/by-path/*kbd*
+```
 
 ## Run without root privileges
 
