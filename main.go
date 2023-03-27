@@ -86,7 +86,7 @@ func main() {
 
 	// if no devices are specified, use the detected ones
 	if len(config.Devices) == 0 {
-		for _, device := range findKeyboardDevices() {
+		for _, device := range detectedKeyboardDevices {
 			config.Devices = append(config.Devices, device.Fn)
 		}
 		if len(config.Devices) == 0 {
