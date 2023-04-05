@@ -29,9 +29,11 @@ var (
 	keyboard        *VirtualKeyboard
 	tapHoldHandler  *TapHoldHandler
 
-	currentLayer        *Layer
-	toggleLayerKey      *uint16
-	toggleLayerPrevious *Layer
+	currentLayer *Layer
+
+	// remember all keys that toggled a layer, and from which layer they came from
+	toggleLayerKeys     []uint16
+	toggleLayerPrevious []*Layer
 )
 
 var opts struct {
@@ -225,12 +227,16 @@ func handleKey(event *KeyboardEvent) {
 	}
 
 	// go back to the previous layer when toggleLayerKey is released
-	if toggleLayerKey != nil && *toggleLayerKey == event.code && !event.isPress {
-		if toggleLayerPrevious != nil {
-			currentLayer = toggleLayerPrevious
-			toggleLayerPrevious = nil
-			toggleLayerKey = nil
-			log.Debugf("Switching to layer %v", currentLayer.Name)
+	if !event.isPress {
+		for i, key := range toggleLayerKeys {
+			if key == event.code {
+				currentLayer = toggleLayerPrevious[i]
+				log.Debugf("Switching to layer %v", currentLayer.Name)
+				// all layers that have been toggled after the current one are removed as well
+				toggleLayerKeys = toggleLayerKeys[:i]
+				toggleLayerPrevious = toggleLayerPrevious[:i]
+				break
+			}
 		}
 	}
 
@@ -269,10 +275,10 @@ func executeBinding(event *KeyboardEvent, binding interface{}) {
 		}
 	case LayerBinding:
 		if event.isPress {
-			// if current layer is toggled, deactivate the toggle
+			// deactivate any toggled layers
 			if toggleLayerPrevious != nil {
+				toggleLayerKeys = nil
 				toggleLayerPrevious = nil
-				toggleLayerKey = nil
 			}
 			for _, layer := range config.Layers {
 				if layer.Name == t.Layer {
@@ -283,13 +289,12 @@ func executeBinding(event *KeyboardEvent, binding interface{}) {
 			}
 		}
 	case ToggleLayerBinding:
-		// only allow one toggle
-		if event.isPress && toggleLayerPrevious == nil {
+		if event.isPress {
 			for _, layer := range config.Layers {
 				if layer.Name == t.Layer {
 					log.Debugf("Switching to layer %v", layer.Name)
-					toggleLayerPrevious = currentLayer
-					toggleLayerKey = &event.code
+					toggleLayerKeys = append(toggleLayerKeys, event.code)
+					toggleLayerPrevious = append(toggleLayerPrevious, currentLayer)
 					currentLayer = layer
 					break
 				}
