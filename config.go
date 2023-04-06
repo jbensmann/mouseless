@@ -62,9 +62,10 @@ type Config struct {
 }
 
 type Layer struct {
-	Name        string
-	PassThrough bool // default true
-	Bindings    map[uint16]Binding
+	Name            string
+	PassThrough     bool // default true
+	Bindings        map[uint16]Binding
+	WildcardBinding Binding
 }
 
 type Binding interface {
@@ -208,7 +209,11 @@ func parseLayer(rawLayer RawLayer) (*Layer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse the binding '%v': %v", bind, err)
 		}
-		layer.Bindings[code] = binding
+		if code == WildcardKey {
+			layer.WildcardBinding = binding
+		} else {
+			layer.Bindings[code] = binding
+		}
 	}
 
 	return &layer, nil

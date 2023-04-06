@@ -221,7 +221,12 @@ func mainLoop() {
 func handleKey(event *KeyboardEvent) {
 	binding, _ := currentLayer.Bindings[event.code]
 
-	// when no binding and pass through is enabled, insert a KeyBinding
+	// use the wildcard binding if no binding is defined for the key
+	if binding == nil && currentLayer.WildcardBinding != nil {
+		binding = currentLayer.WildcardBinding
+	}
+
+	// if there is no wildcard either and pass through is enabled, insert a KeyBinding
 	if binding == nil && currentLayer.PassThrough {
 		binding = KeyBinding{KeyCombo: []uint16{event.code}}
 	}
@@ -306,7 +311,15 @@ func executeBinding(event *KeyboardEvent, binding interface{}) {
 		}
 	case KeyBinding:
 		if event.isPress {
-			keyboard.PressKeys(event.code, t.KeyCombo)
+			// replace any wildcard with the key that was pressed
+			keys := make([]uint16, len(t.KeyCombo))
+			copy(keys, t.KeyCombo)
+			for i, key := range keys {
+				if key == WildcardKey {
+					keys[i] = event.code
+				}
+			}
+			keyboard.PressKeys(event.code, keys)
 		}
 	case ButtonBinding:
 		if event.isPress {
@@ -317,6 +330,12 @@ func executeBinding(event *KeyboardEvent, binding interface{}) {
 		if event.isPress {
 			log.Debugf("Executing: %s", t.Command)
 			cmd := exec.Command("sh", "-c", t.Command)
+			// pass the pressed key as environment variable
+			cmd.Env = append(
+				os.Environ(),
+				fmt.Sprintf("key=%d", keyAliasesReversed[event.code]),
+				fmt.Sprintf("key_code=%d", event.code),
+			)
 			err := cmd.Run()
 			if err != nil {
 				log.Warnf("Execution of command failed: %v", err)

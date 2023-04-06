@@ -117,7 +117,7 @@ layers:
     k0: "exec xdotool mousemove 0 0"
 # another layer for arrows and some other keys
 - name: arrows
-  passThrough: true
+  passThrough: false
   bindings:
     e: up
     s: left
@@ -127,6 +127,8 @@ layers:
     w: backspace
     r: delete
     v: enter
+    # _ is the wildcard key, which matches any key that is not mapped
+    _: rightalt+_
 ```
 
 One can define an arbitrary number of layers, each with an arbitrary number of bindings, e.g. `esc: capslock`

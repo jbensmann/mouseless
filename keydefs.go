@@ -1,6 +1,9 @@
 package main
 
+const WildcardKey = 10000
+
 var keyAliases = map[string]uint16{
+	"_":                WildcardKey,
 	"reserved":         0,
 	"esc":              1,
 	"k1":               2,
