@@ -14,7 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const version = "0.1.4"
+const version = "0.1.5"
 
 const (
 	mouseLoopInterval = 20 * time.Millisecond
