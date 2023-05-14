@@ -1,4 +1,3 @@
-VERSION = 0.1.4
 GO      = /usr/bin/go
 INSTALLPATH ?= /usr/bin
 SERVICEPATH ?= $(HOME)/.config/systemd/user
@@ -12,21 +11,13 @@ clean:
 	-rm --force $(binary)
 
 debug:
-	@echo 'go build -ldflags="-s -w"'
-	$(GO) build -ldflags="-s -w" .
-	@echo ""
-	
 	@echo "# Stopping the service"
 	-systemctl --user stop $(service)
 	@echo ""
 
-	@echo "# Chown root $(binary)"
-	sudo chown root $(binary)
-	@echo "# Chmod u+s $(binary)"
-	sudo chmod u+s $(binary)
 	@echo "# Run $(binary)"
 	@echo "# config path: $(CONFIGPATH)/$(config)"
-	./$(binary) --config $(CONFIGPATH)/$(config) --debug
+	$(GO) run . --config $(CONFIGPATH)/$(config) --debug
 	@echo "################"
 
 install:
