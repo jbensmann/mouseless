@@ -1,37 +1,15 @@
 #!/usr/bin/env sh
-version=0.1.5
 temporary=/tmp/mouseless
+version=$(curl --silent "https://api.github.com/repos/jbensmann/mouseless/releases/latest" | grep -oP '"tag_name": "\K(.*)(?=")')
 
 echo "=========================================="
-echo "Install mouseless version $version? [y/n]"
+echo "Installing latest version of mouseless: $version"
 echo "=========================================="
-read choice
-if [ "$choice" == "y" ]; then 
-    echo "Installing."
-    wget -q -P $temporary https://github.com/jbensmann/mouseless/releases/download/v$version/mouseless-linux-amd64.tar.gz && \
-    tar -xf $temporary/mouseless-linux-amd64.tar.gz --directory $temporary && \
-    sudo mv $temporary/dist/mouseless /usr/local/bin/ && \
-    echo "Installed to /usr/local/bin/mouseless" || echo "Failed to install mouseless."
-    # helps the user see what's going on
-    sleep 2
-else
-echo "Skipping."
-fi
-
-echo ""
-echo "=========================================="
-echo "Finding keyboard devices."
-echo "=========================================="
-sleep 1
-keyboards=$(find /dev/input/by-id /dev/input/by-path -name "*kbd*")
-if [ -z "$keyboard" ]; then
-    echo "$keyboards"
-    # simply pick the first one
-    keyboard="$(echo "$keyboards" | head -n1)"
-else
-    keyboard="replace_me"
-    echo "No keyboard device found."
-fi
+wget -q -P $temporary https://github.com/jbensmann/mouseless/releases/download/$version/mouseless-linux-amd64.tar.gz && \
+tar -xf $temporary/mouseless-linux-amd64.tar.gz --directory $temporary && \
+sudo mv $temporary/dist/mouseless /usr/local/bin/ && \
+echo "Installed to /usr/local/bin/mouseless" || echo "Failed to install mouseless."
+# helps the user see what's going on
 sleep 2
 
 # create a config file if it does not exist
@@ -44,9 +22,9 @@ if [ ! -f ~/.config/mouseless/config.yaml ]; then
 
     mkdir -p ~/.config/mouseless
     echo '
+# the keyboard devices it reads from, if no devices are specified, it reads from all
 devices:
-# change this to a keyboard device
-- "'$keyboard'"
+# - "/dev/input/by-id/SOME_KEYBOARD_REPLACE_ME-event-kbd"
 # this is executed when mouseless starts
 # startCommand: ""
 # the default speed for mouse movement
