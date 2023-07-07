@@ -42,7 +42,7 @@ func (v *VirtualMouse) ButtonPress(triggeredByKey uint16, button MouseButton) {
 	if button == ButtonLeft {
 		err = v.uinputMouse.LeftPress()
 	} else if button == ButtonMiddle {
-		err = v.uinputMouse.MiddleClick()
+		err = v.uinputMouse.MiddlePress()
 	} else if button == ButtonRight {
 		err = v.uinputMouse.RightPress()
 	} else {
@@ -61,7 +61,7 @@ func (v *VirtualMouse) OriginalKeyUp(code uint16) {
 			if button == ButtonLeft {
 				err = v.uinputMouse.LeftRelease()
 			} else if button == ButtonMiddle {
-				// todo
+				err = v.uinputMouse.MiddleRelease()
 			} else if button == ButtonRight {
 				err = v.uinputMouse.RightRelease()
 			} else {
