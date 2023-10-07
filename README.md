@@ -190,4 +190,9 @@ KERNEL==\"event*\", GROUP=\"$USER\", NAME=\"input/%k\", MODE=\"660\"" \
 ```
 
 To apply the changes, you can simply reboot your machine.
+In case that does not work, it might be that the uinput kernel module is not loaded, which can be fixed with this,
+followed by a reboot:
 
+```sh
+echo "uinput" | sudo tee /etc/modules-load.d/uinput.conf
+```
