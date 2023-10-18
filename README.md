@@ -178,6 +178,39 @@ ls /dev/input/by-id/*kbd*
 ls /dev/input/by-path/*kbd*
 ```
 
+## Run at startup without typing login passcode
+
+For most distros, we can run mouseless at startup using `systemd`.
+
+1. Download and move the latest release of mouseless to `/usr/local/bin/` in elevated previliges.
+   Make sure to complete the **entire process** including download in elevated previliges (i.e. `sudo su`),
+   otherwise the program might not be able to be executed using systemd.
+2. Make a file called `mouseless.service` in `/etc/systemd/system/` with the following countent:
+```
+[Unit]
+Description=Mouseless Service
+
+[Service]
+Type=simple
+ExecStart=mouseless --config <your config location>/config.yaml
+Restart=on-failure
+RestartSec=10
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
+```
+3. enable and start the mouseless service using the following command:
+```
+sudo systemctl enable mouseless.service
+sudo systemctl start mouseless.service
+```
+and you can check the status of mouseless via the following command:
+```
+sudo systemctl status mouseless.service
+```
+
+
 ## Run without root privileges
 
 To run without using sudo, you can add an udev rule with the following command, which allows your user to read from
