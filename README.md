@@ -217,9 +217,10 @@ To run without using sudo, you can add an udev rule with the following command, 
 keyboard devices and create a virtual keyboard and mouse:
 
 ```sh
-echo "KERNEL==\"uinput\", GROUP=\"$USER\", MODE:=\"0660\"
-KERNEL==\"event*\", GROUP=\"$USER\", NAME=\"input/%k\", MODE=\"660\"" \
-| sudo tee /etc/udev/rules.d/99-$USER.rules
+sudo tee /etc/udev/rules.d/99-$USER.rules <<EOF
+KERNEL=="uinput", GROUP="$USER", MODE:="0660"
+KERNEL=="event*", GROUP="$USER", NAME="input/%k", MODE="660"
+EOF
 ```
 
 To apply the changes, you can simply reboot your machine.
