@@ -1,8 +1,8 @@
 [Unit]
-Description=mouseless service
+Description=mouseless
 
 [Service]
-ExecStart=/usr/bin/mouseless
+ExecStart=/usr/local/bin/mouseless
 
 [Install]
 WantedBy=default.target

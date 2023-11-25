@@ -198,51 +198,45 @@ followed by a reboot:
 echo "uinput" | sudo tee /etc/modules-load.d/uinput.conf
 ```
 
-## Run at startup without typing login passcode
+## Run at startup with systemd
 
-For most distros, we can run mouseless at startup using `systemd`.
+One option to automatically start mouseess at startup is using `systemd`, which is available in most distros.
 
 ### With root privileges
 
-1. Download and move the latest release of mouseless to a directory, e.g. `/usr/local/bin/` in elevated previliges.
-   Make sure to complete the **entire process** including download in elevated previliges (i.e. `sudo su`),
-   otherwise the program might not be able to be executed using systemd.
-2. Make a file called `mouseless.service` in `/etc/systemd/system/` with the following countent.
-   Note if you may need to set the `mouseless` command with absolute path for the `ExecStart`.
+1. Download the latest release of mouseless, e.g. to `/usr/local/bin/mouseless`, and make it executable,
+   e.g. `sudo chmod +x /usr/local/bin/mouseless`.
+2. Create a file called `mouseless.service` in `/etc/systemd/system/` with the following content (replace the config
+   file):
    ```
    [Unit]
-   Description=Mouseless Service
+   Description=mouseless
 
    [Service]
-   Type=simple
-   ExecStart=/path/to/mouseless --config /path/to/config.yaml
-   Restart=on-failure
-   RestartSec=10
-   KillMode=process
+   ExecStart=/usr/local/bin/mouseless --config /path/to/config.yaml
 
    [Install]
    WantedBy=multi-user.target
    ```
-3. Enable and start the mouseless service using the following command:
+3. Enable and start the service:
    ```sh
    sudo systemctl enable mouseless.service
    sudo systemctl start mouseless.service
    ```
-   and you can check the status of mouseless via the following command:
+   You can check the status with:
    ```sh
    sudo systemctl status mouseless.service
    ```
 
 ### Without root privileges
 
-1. Download and move the latest release of mouseless to a `bin` directory, e.g. `$HOME/.local/bin/`.
-2. Make the file `mouseless.service` mentioned in the previous section in `$HOME/.config/systemd/user/`.
-3. Enable and start the mouseless service using the following command:
+One can also install mouseless for a specific user only (the user needs to have permission to run mouseless, see
+section `Run without root privileges`):
+
+1. Download the latest release of mouseless, e.g. to `$HOME/.local/bin/mouseless`, and make it executable,
+   e.g. `sudo chmod +x $HOME/.local/bin/mouseless`.
+2. Create the file `mouseless.service` mentioned in the previous section in `$HOME/.config/systemd/user/`.
+3. Enable and start the mouseless:
    ```sh
    systemctl --user enable mouseless.service
    systemctl --user start mouseless.service
-   ```
-   and you can check the status of mouseless via the following command:
-   ```sh
-   systemctl --user status mouseless.service
-   ```

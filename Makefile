@@ -1,5 +1,5 @@
 GO      = /usr/bin/go
-INSTALLPATH ?= /usr/bin
+INSTALLPATH ?= /usr/local/bin
 SERVICEPATH ?= $(HOME)/.config/systemd/user
 CONFIGPATH ?= $(HOME)/.config/mouseless
 service = mouseless.service
