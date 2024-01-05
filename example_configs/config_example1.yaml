@@ -19,6 +19,9 @@ startMouseSpeed: 0.0
 mouseDecelerationTime: 300.0
 mouseDecelerationCurve: 3.0
 
+# enables auto-repeat of a tap key when pressed twice within this duration
+quickTapTime: 150
+
 # the rest of the config defines the layers with their bindings
 layers:
 # the first layer is active at start

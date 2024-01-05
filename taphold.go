@@ -9,10 +9,13 @@ import (
 )
 
 type TapHoldHandler struct {
+	quickTapTime int64
+
 	inChannel     chan KeyboardEvent
 	outChannel    chan KeyboardEvent
 	isPressed     map[uint16]bool
 	isPressedLock sync.RWMutex
+	lastPressed   map[uint16]time.Time
 
 	isHoldBack             bool
 	holdBackEvents         []*KeyboardEvent // pointers so that events can be manipulated
@@ -22,13 +25,15 @@ type TapHoldHandler struct {
 	holdBackStartIsPressed map[uint16]bool
 }
 
-func NewTapHoldHandler() *TapHoldHandler {
+func NewTapHoldHandler(quickTapTime int64) *TapHoldHandler {
 	handler := TapHoldHandler{
+		quickTapTime:           quickTapTime,
 		inChannel:              make(chan KeyboardEvent, 1000),
 		outChannel:             make(chan KeyboardEvent, 1000),
 		holdBackTimeout:        time.NewTimer(math.MaxInt64),
 		isHoldBack:             false,
 		isPressed:              make(map[uint16]bool),
+		lastPressed:            make(map[uint16]time.Time),
 		holdBackStartIsPressed: make(map[uint16]bool),
 	}
 	return &handler
@@ -71,7 +76,10 @@ func (t *TapHoldHandler) handleKey(event KeyboardEvent) {
 	if event.isPress {
 		// tapHold key pressed?
 		if binding, ok := currentLayer.Bindings[event.code].(TapHoldBinding); ok {
-			if !t.isHoldBack {
+			// hold back if: no other key is held back && key has not been pressed recently
+			lastPressed, isPressed := t.lastPressed[event.code]
+			recentlyPressed := isPressed && time.Now().Before(lastPressed.Add(time.Duration(t.quickTapTime)*time.Millisecond))
+			if !t.isHoldBack && !recentlyPressed {
 				log.Debugf("Activating holdBack")
 				t.isHoldBack = true
 				t.tapHoldEvent = &event
@@ -160,6 +168,7 @@ func (t *TapHoldHandler) setKeyPressed(code uint16, pressed bool) {
 	defer t.isPressedLock.Unlock()
 	if pressed {
 		t.isPressed[code] = true
+		t.lastPressed[code] = time.Now()
 	} else {
 		delete(t.isPressed, code)
 	}

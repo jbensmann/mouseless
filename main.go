@@ -109,7 +109,7 @@ func main() {
 	}
 	defer keyboard.Close()
 
-	tapHoldHandler = NewTapHoldHandler()
+	tapHoldHandler = NewTapHoldHandler(int64(config.QuickTapTime))
 
 	// init keyboard devices
 	for _, dev := range config.Devices {
