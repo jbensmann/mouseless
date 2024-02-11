@@ -221,6 +221,11 @@ func mainLoop() {
 func handleKey(event *KeyboardEvent) {
 	binding, _ := currentLayer.Bindings[event.code]
 
+	// switch to first layer on escape, if not mapped to something else
+	if binding == nil && event.code == evdev.KEY_ESC && event.isPress && currentLayer != config.Layers[0] {
+		binding = LayerBinding{BaseBinding{}, config.Layers[0].Name}
+	}
+
 	// use the wildcard binding if no binding is defined for the key
 	if binding == nil && currentLayer.WildcardBinding != nil {
 		binding = currentLayer.WildcardBinding
@@ -252,12 +257,6 @@ func handleKey(event *KeyboardEvent) {
 	}
 
 	executeBinding(event, binding)
-
-	// switch to first layer on escape
-	if event.code == evdev.KEY_ESC && event.isPress {
-		currentLayer = config.Layers[0]
-		log.Debugf("Switching to layer %v", currentLayer.Name)
-	}
 }
 
 // executeBinding does what needs to be done for the given binding.
