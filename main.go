@@ -28,7 +28,7 @@ var (
 	configFile string
 
 	keyboardDevices []*keyboard.Device
-	virtualMouse    *virtual.VirtualMouse
+	virtualMouse    *virtual.Mouse
 	virtualKeyboard *virtual.VirtualKeyboard
 
 	eventInChannel chan keyboard.Event
@@ -101,7 +101,7 @@ func main() {
 	}
 
 	// init virtual mouse and keyboard
-	virtualMouse, err = virtual.NewVirtualMouse()
+	virtualMouse, err = virtual.NewMouse(conf)
 	if err != nil {
 		exitError(err, "Failed to init the virtual mouse")
 	}
@@ -147,6 +147,7 @@ func main() {
 		}
 	}
 
+	virtualMouse.StartLoop()
 	mainLoop()
 }
 
