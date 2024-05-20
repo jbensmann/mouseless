@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"fmt"
@@ -25,6 +25,7 @@ const (
 	ActionSpeed              Action = "speed"
 	ActionButton             Action = "button"
 	ActionExec               Action = "exec"
+	ActionNop                Action = "nop"
 )
 
 // RawConfig defines the structure of the config file.
@@ -67,6 +68,7 @@ type Layer struct {
 	Name            string
 	PassThrough     bool // default true
 	Bindings        map[uint16]Binding
+	ComboBindings   map[uint16]map[uint16]Binding
 	WildcardBinding Binding
 }
 
@@ -96,6 +98,9 @@ type TapHoldBinding struct {
 type LayerBinding struct {
 	BaseBinding
 	Layer string
+}
+type NopBinding struct {
+	BaseBinding
 }
 type ToggleLayerBinding struct {
 	BaseBinding
@@ -129,8 +134,8 @@ type ExecBinding struct {
 	Command string
 }
 
-// readConfig reads and parses the configuration from the given file.
-func readConfig(fileName string) (*Config, error) {
+// ReadConfig reads and parses the configuration from the given file.
+func ReadConfig(fileName string) (*Config, error) {
 	rawConfig, err := readRawConfig(fileName)
 	if err != nil {
 		return nil, err
@@ -194,6 +199,7 @@ func parseLayer(rawLayer RawLayer) (*Layer, error) {
 
 	layer.Name = rawLayer.Name
 	layer.Bindings = make(map[uint16]Binding)
+	layer.ComboBindings = make(map[uint16]map[uint16]Binding)
 	if rawLayer.PassThrough == nil {
 		layer.PassThrough = true
 	} else {
@@ -204,7 +210,7 @@ func parseLayer(rawLayer RawLayer) (*Layer, error) {
 		rawLayer.Bindings = make(map[string]string)
 	}
 	for key, bind := range rawLayer.Bindings {
-		code, err := parseKey(key)
+		codes, err := parseKeyCombo(key)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse the key '%v': %v", key, err)
 		}
@@ -212,10 +218,23 @@ func parseLayer(rawLayer RawLayer) (*Layer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse the binding '%v': %v", bind, err)
 		}
-		if code == WildcardKey {
-			layer.WildcardBinding = binding
+		if len(codes) == 1 {
+			if codes[0] == WildcardKey {
+				layer.WildcardBinding = binding
+			} else {
+				layer.Bindings[codes[0]] = binding
+			}
+		} else if len(codes) == 2 {
+			if _, ok := layer.ComboBindings[codes[0]]; !ok {
+				layer.ComboBindings[codes[0]] = make(map[uint16]Binding)
+			}
+			if _, ok := layer.ComboBindings[codes[1]]; !ok {
+				layer.ComboBindings[codes[1]] = make(map[uint16]Binding)
+			}
+			layer.ComboBindings[codes[0]][codes[1]] = binding
+			layer.ComboBindings[codes[1]][codes[0]] = binding
 		} else {
-			layer.Bindings[code] = binding
+			//todo
 		}
 	}
 
@@ -346,6 +365,11 @@ func parseBinding(rawBinding string) (binding Binding, err error) {
 			return nil, fmt.Errorf("action requires at least one argument")
 		}
 		binding = ExecBinding{Command: argString}
+	case string(ActionNop):
+		if len(args) != 0 {
+			return nil, fmt.Errorf("action does not take any argument")
+		}
+		binding = NopBinding{}
 	default:
 		combo, err := parseKeyCombo(rawBinding)
 		if err != nil {

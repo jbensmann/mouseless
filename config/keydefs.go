@@ -1,4 +1,4 @@
-package main
+package config
 
 const WildcardKey = 10000
 
@@ -243,4 +243,14 @@ func init() {
 	for alias, code := range keyAliases {
 		keyAliasesReversed[code] = alias
 	}
+}
+
+func GetKeyCode(alias string) (code uint16, exists bool) {
+	code, exists = keyAliases[alias]
+	return code, exists
+}
+
+func GetKeyAlias(code uint16) (alias string, exists bool) {
+	alias, exists = keyAliasesReversed[code]
+	return alias, exists
 }

@@ -1,7 +1,8 @@
-package main
+package virtual
 
 import (
 	"github.com/bendahl/uinput"
+	"github.com/jbensmann/mouseless/config"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -33,7 +34,8 @@ func (v *VirtualKeyboard) PressKeys(triggeredByKey uint16, codes []uint16) {
 		v.releaseKey(c)
 	}
 	for i, c := range codes {
-		log.Debugf("Keyboard: pressing %v", c)
+		alias, _ := config.GetKeyAlias(c)
+		log.Debugf("Keyboard: pressing %v (%v)", alias, c)
 		err := v.uinputKeyboard.KeyDown(int(c))
 		if err != nil {
 			log.Warnf("Keyboard: failed to press the key %v: %v", c, err)
@@ -46,7 +48,8 @@ func (v *VirtualKeyboard) PressKeys(triggeredByKey uint16, codes []uint16) {
 }
 
 func (v *VirtualKeyboard) releaseKey(code uint16) {
-	log.Debugf("Keyboard: releasing %v", code)
+	alias, _ := config.GetKeyAlias(code)
+	log.Debugf("Keyboard: releasing %v (%v)", alias, code)
 	err := v.uinputKeyboard.KeyUp(int(code))
 	if err != nil {
 		log.Warnf("Keyboard: failed to release the key %v: %v", code, err)

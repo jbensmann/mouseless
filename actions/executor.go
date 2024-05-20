@@ -1,0 +1,152 @@
+package actions
+
+import (
+	"fmt"
+	"github.com/jbensmann/mouseless/config"
+	"github.com/jbensmann/mouseless/handlers"
+	"github.com/jbensmann/mouseless/keyboard"
+	"github.com/jbensmann/mouseless/virtual"
+	log "github.com/sirupsen/logrus"
+	"os"
+	"os/exec"
+)
+
+type ExecutedBinding struct {
+	cause   *keyboard.Event
+	binding config.Binding
+}
+
+type BindingExecutor struct {
+	config       *config.Config
+	currentLayer *config.Layer
+
+	virtualKeyboard *virtual.VirtualKeyboard
+	virtualMouse    *virtual.VirtualMouse
+
+	// remember all keys that toggled a layer, and from which layer they came from
+	toggleLayerKeys     []uint16
+	toggleLayerPrevious []*config.Layer
+}
+
+func (b *BindingExecutor) SetNextHandler(_ handlers.EventHandler) {
+}
+
+func (b *BindingExecutor) SetLayerManager(_ handlers.LayerManager) {
+}
+
+func NewBindingExecutor(config *config.Config, virtualKeyboard *virtual.VirtualKeyboard, virtualMouse *virtual.VirtualMouse) *BindingExecutor {
+	b := BindingExecutor{
+		config:          config,
+		currentLayer:    config.Layers[0],
+		virtualKeyboard: virtualKeyboard,
+		virtualMouse:    virtualMouse,
+	}
+	return &b
+}
+
+func (b *BindingExecutor) HandleEvent(eventBinding handlers.EventBinding) {
+	if eventBinding.Binding != nil {
+		b.ExecuteBinding(eventBinding.Binding, eventBinding.Event.Code)
+	}
+	if !eventBinding.Event.IsPress {
+		b.KeyReleased(eventBinding.Event.Code)
+	}
+}
+
+func (b *BindingExecutor) ExecuteBinding(binding config.Binding, causeCode uint16) {
+	log.Debugf("Executing %T: %+v", binding, binding)
+
+	switch t := binding.(type) {
+	case config.MultiBinding:
+		for _, binding := range t.Bindings {
+			b.ExecuteBinding(binding, causeCode)
+		}
+	case config.SpeedBinding:
+		b.virtualMouse.AddSpeedFactor(causeCode, t.Speed)
+	case config.ScrollBinding:
+		b.virtualMouse.ChangeScrollSpeed(causeCode, t.X, t.Y)
+	case config.MoveBinding:
+		b.virtualMouse.ChangeMoveSpeed(causeCode, t.X, t.Y)
+	case config.ButtonBinding:
+		b.virtualMouse.ButtonPress(causeCode, t.Button)
+	case config.KeyBinding:
+		// replace any wildcard with the key that was pressed
+		keys := make([]uint16, len(t.KeyCombo))
+		copy(keys, t.KeyCombo)
+		for i, key := range keys {
+			if key == config.WildcardKey {
+				keys[i] = causeCode
+			}
+		}
+		b.virtualKeyboard.PressKeys(causeCode, keys)
+	case config.LayerBinding:
+		// deactivate any toggled layers
+		if b.toggleLayerPrevious != nil {
+			b.toggleLayerKeys = nil
+			b.toggleLayerPrevious = nil
+		}
+		for _, layer := range b.config.Layers {
+			if layer.Name == t.Layer {
+				log.Debugf("Switching to layer %v", layer.Name)
+				b.currentLayer = layer
+				break
+			}
+		}
+	case config.ToggleLayerBinding:
+		for _, layer := range b.config.Layers {
+			if layer.Name == t.Layer {
+				log.Debugf("Switching to layer %v", layer.Name)
+				b.toggleLayerKeys = append(b.toggleLayerKeys, causeCode)
+				b.toggleLayerPrevious = append(b.toggleLayerPrevious, b.currentLayer)
+				b.currentLayer = layer
+				break
+			}
+		}
+	case config.ReloadConfigBinding:
+		// todo
+		//loadConfig()
+	case config.ExecBinding:
+		log.Debugf("Executing: %s", t.Command)
+		cmd := exec.Command("sh", "-c", t.Command)
+		// pass the pressed key as environment variable
+		alias, exists := config.GetKeyAlias(causeCode)
+		if !exists {
+			alias = "unknown"
+		}
+		cmd.Env = append(
+			os.Environ(),
+			fmt.Sprintf("key=%s", alias),
+			fmt.Sprintf("key_code=%d", causeCode),
+		)
+		err := cmd.Run()
+		if err != nil {
+			log.Warnf("Execution of command failed: %v", err)
+		}
+	}
+}
+
+func (b *BindingExecutor) CurrentLayer() *config.Layer {
+	return b.currentLayer
+}
+
+func (b *BindingExecutor) BaseLayer() *config.Layer {
+	return b.config.Layers[0]
+}
+
+func (b *BindingExecutor) KeyReleased(code uint16) {
+	// go back to the previous layer when toggleLayerKey is released
+	for i, key := range b.toggleLayerKeys {
+		if key == code {
+			b.currentLayer = b.toggleLayerPrevious[i]
+			log.Debugf("Switching to layer %v", b.currentLayer.Name)
+			// all layers that have been toggled after the current one are removed as well
+			b.toggleLayerKeys = b.toggleLayerKeys[:i]
+			b.toggleLayerPrevious = b.toggleLayerPrevious[:i]
+			break
+		}
+	}
+
+	// inform the keyboard and mouse about key releases
+	b.virtualKeyboard.OriginalKeyUp(code)
+	b.virtualMouse.OriginalKeyUp(code)
+}
