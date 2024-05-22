@@ -2,12 +2,11 @@ package config
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 	"os"
 	"strconv"
 	"strings"
-
-	log "github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
 )
 
 type Action string
@@ -32,6 +31,7 @@ const (
 type RawConfig struct {
 	Devices                []string   `yaml:"devices"`
 	StartCommand           string     `yaml:"startCommand"`
+	MouseLoopInterval      int64      `yaml:"mouseLoopInterval"`
 	BaseMouseSpeed         float64    `yaml:"baseMouseSpeed"`
 	StartMouseSpeed        float64    `yaml:"startMouseSpeed"`
 	MouseAccelerationCurve float64    `yaml:"mouseAccelerationCurve"`
@@ -53,6 +53,8 @@ type RawLayer struct {
 type Config struct {
 	Devices                []string
 	StartCommand           string
+	MouseLoopInterval      int64
+	QuickTapTime           float64
 	BaseMouseSpeed         float64
 	MouseAccelerationCurve float64
 	MouseAccelerationTime  float64
@@ -60,7 +62,6 @@ type Config struct {
 	MouseDecelerationTime  float64
 	StartMouseSpeed        float64
 	BaseScrollSpeed        float64
-	QuickTapTime           float64
 	Layers                 []*Layer
 }
 
@@ -147,6 +148,11 @@ func ReadConfig(fileName string) (*Config, error) {
 	}
 	config.Devices = rawConfig.Devices
 	config.StartCommand = rawConfig.StartCommand
+	if rawConfig.MouseLoopInterval > 0 {
+		config.MouseLoopInterval = rawConfig.MouseLoopInterval
+	} else {
+		config.MouseLoopInterval = 20
+	}
 	config.BaseMouseSpeed = rawConfig.BaseMouseSpeed
 	if rawConfig.MouseAccelerationCurve > 0 {
 		config.MouseAccelerationCurve = rawConfig.MouseAccelerationCurve

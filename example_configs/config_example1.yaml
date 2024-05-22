@@ -5,6 +5,9 @@ devices:
 # this is executed when mouseless starts, e.g. useful for setting the keyboard layout
 # startCommand: "setxkbmap de"
 
+# the rate at which the mouse pointer moves (in ms)
+mouseLoopInterval: 20
+
 # the default speed for mouse movement and scrolling
 baseMouseSpeed: 750.0
 baseScrollSpeed: 20.0

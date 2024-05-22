@@ -21,7 +21,7 @@ type BindingExecutor struct {
 	currentLayer *config.Layer
 
 	virtualKeyboard *virtual.VirtualKeyboard
-	virtualMouse    *virtual.VirtualMouse
+	virtualMouse    *virtual.Mouse
 
 	// remember all keys that toggled a layer, and from which layer they came from
 	toggleLayerKeys     []uint16
@@ -34,7 +34,7 @@ func (b *BindingExecutor) SetNextHandler(_ handlers.EventHandler) {
 func (b *BindingExecutor) SetLayerManager(_ handlers.LayerManager) {
 }
 
-func NewBindingExecutor(config *config.Config, virtualKeyboard *virtual.VirtualKeyboard, virtualMouse *virtual.VirtualMouse) *BindingExecutor {
+func NewBindingExecutor(config *config.Config, virtualKeyboard *virtual.VirtualKeyboard, virtualMouse *virtual.Mouse) *BindingExecutor {
 	b := BindingExecutor{
 		config:          config,
 		currentLayer:    config.Layers[0],

@@ -3,6 +3,7 @@ package virtual
 import (
 	"github.com/jbensmann/mouseless/config"
 	"math"
+	"sync"
 	"time"
 
 	"github.com/bendahl/uinput"
@@ -38,17 +39,20 @@ type Mouse struct {
 	scrollByKeys  map[uint16]Vector
 	speedByKeys   map[uint16]float64
 
+	isRunning      bool
 	velocity       Vector
 	moveFraction   Vector
 	scrollFraction Vector
 
-	mouseMoveChangeChannel chan struct{}
+	lock                   sync.Mutex
+	mouseLoopTimer         *time.Timer
+	mouseMoveEventsChannel chan struct{}
 }
 
 func NewMouse(conf *config.Config) (*Mouse, error) {
 	var err error
 	v := Mouse{
-		mouseLoopInterval:      20 * time.Millisecond,
+		mouseLoopInterval:      time.Duration(conf.MouseLoopInterval) * time.Millisecond,
 		baseMouseSpeed:         conf.BaseMouseSpeed,
 		baseScrollSpeed:        conf.BaseScrollSpeed,
 		startMouseSpeed:        conf.StartMouseSpeed,
@@ -65,7 +69,7 @@ func NewMouse(conf *config.Config) (*Mouse, error) {
 		velocity:               Vector{},
 		moveFraction:           Vector{},
 		scrollFraction:         Vector{},
-		mouseMoveChangeChannel: make(chan struct{}, 1),
+		mouseMoveEventsChannel: make(chan struct{}, 1),
 	}
 	v.uinputMouse, err = uinput.CreateMouse("/dev/uinput", []byte("mouseless"))
 	if err != nil {
@@ -74,21 +78,25 @@ func NewMouse(conf *config.Config) (*Mouse, error) {
 	return &v, nil
 }
 
-func (v *Mouse) StartLoop() {
-	go v.mainLoop()
+func (m *Mouse) StartLoop() {
+	m.isRunning = true
+	go m.mainLoop()
 }
 
-func (v *Mouse) ButtonPress(triggeredByKey uint16, button config.MouseButton) {
+func (m *Mouse) ButtonPress(triggeredByKey uint16, button config.MouseButton) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
 	var err error
-	v.buttonsByKeys[triggeredByKey] = button
-	v.isButtonPressed[button] = true
+	m.buttonsByKeys[triggeredByKey] = button
+	m.isButtonPressed[button] = true
 	log.Debug("Mouse: pressing %v", button)
 	if button == config.ButtonLeft {
-		err = v.uinputMouse.LeftPress()
+		err = m.uinputMouse.LeftPress()
 	} else if button == config.ButtonMiddle {
-		err = v.uinputMouse.MiddlePress()
+		err = m.uinputMouse.MiddlePress()
 	} else if button == config.ButtonRight {
-		err = v.uinputMouse.RightPress()
+		err = m.uinputMouse.RightPress()
 	} else {
 		log.Warnf("Mouse: unknown button: %v", button)
 	}
@@ -97,65 +105,80 @@ func (v *Mouse) ButtonPress(triggeredByKey uint16, button config.MouseButton) {
 	}
 }
 
-func (v *Mouse) ChangeMoveSpeed(triggeredByKey uint16, x float64, y float64) {
-	v.moveByKeys[triggeredByKey] = Vector{x, y}
-	v.mouseMoveChange()
+func (m *Mouse) ChangeMoveSpeed(triggeredByKey uint16, x float64, y float64) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	m.moveByKeys[triggeredByKey] = Vector{x, y}
+	m.mouseMoveChange()
 }
 
-func (v *Mouse) ChangeScrollSpeed(triggeredByKey uint16, x float64, y float64) {
-	v.scrollByKeys[triggeredByKey] = Vector{x, y}
-	v.mouseMoveChange()
+func (m *Mouse) ChangeScrollSpeed(triggeredByKey uint16, x float64, y float64) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	m.scrollByKeys[triggeredByKey] = Vector{x, y}
+	m.mouseMoveChange()
 }
 
-func (v *Mouse) AddSpeedFactor(triggeredByKey uint16, speedFactor float64) {
-	v.speedByKeys[triggeredByKey] = speedFactor
-	v.mouseMoveChange()
+func (m *Mouse) AddSpeedFactor(triggeredByKey uint16, speedFactor float64) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	m.speedByKeys[triggeredByKey] = speedFactor
+	m.mouseMoveChange()
 }
 
-func (v *Mouse) OriginalKeyUp(code uint16) {
-	delete(v.moveByKeys, code)
-	delete(v.scrollByKeys, code)
-	delete(v.speedByKeys, code)
+func (m *Mouse) OriginalKeyUp(code uint16) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
 
-	if button, ok := v.buttonsByKeys[code]; ok {
-		if pressed, ok := v.isButtonPressed[button]; ok && pressed {
+	delete(m.moveByKeys, code)
+	delete(m.scrollByKeys, code)
+	delete(m.speedByKeys, code)
+
+	if button, ok := m.buttonsByKeys[code]; ok {
+		if pressed, ok := m.isButtonPressed[button]; ok && pressed {
 			var err error
 			log.Debugf("Mouse: releasing %v", button)
 			if button == config.ButtonLeft {
-				err = v.uinputMouse.LeftRelease()
+				err = m.uinputMouse.LeftRelease()
 			} else if button == config.ButtonMiddle {
-				err = v.uinputMouse.MiddleRelease()
+				err = m.uinputMouse.MiddleRelease()
 			} else if button == config.ButtonRight {
-				err = v.uinputMouse.RightRelease()
+				err = m.uinputMouse.RightRelease()
 			} else {
 				log.Warnf("Mouse: unknown button: %v", button)
 			}
 			if err != nil {
 				log.Warnf("Mouse: button release failed: %v", err)
 			}
-			delete(v.isButtonPressed, button)
+			delete(m.isButtonPressed, button)
 		}
-		delete(v.buttonsByKeys, code)
+		delete(m.buttonsByKeys, code)
 	}
 }
 
-func (v *Mouse) Close() {
-	_ = v.uinputMouse.Close()
-	// todo: stop the main loop
+func (m *Mouse) Close() {
+	m.isRunning = false
+
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	_ = m.uinputMouse.Close()
 }
 
-func (v *Mouse) mainLoop() {
-	mouseTimer := time.NewTimer(v.mouseLoopInterval)
+func (m *Mouse) mainLoop() {
 	lastUpdate := time.Now()
 
-	for {
-		select {
-		case <-mouseTimer.C:
-		case <-v.mouseMoveChangeChannel:
-			// todo: check if we need to check for scrolling
-			if !v.isMoving() {
-				lastUpdate = time.Now()
-			}
+	for m.isRunning {
+		if m.mouseLoopTimer != nil {
+			<-m.mouseLoopTimer.C
+		} else {
+			// wait for an incoming mouse movement event
+			<-m.mouseMoveEventsChannel
+			// set lastUpdate to the past so that the mouse starts moving immediately
+			lastUpdate = time.Now().Add(-m.mouseLoopInterval)
 		}
 
 		// how much time has passed?
@@ -163,50 +186,54 @@ func (v *Mouse) mainLoop() {
 		updateDuration := now.Sub(lastUpdate)
 		lastUpdate = now
 
-		// handle mouse movement and scrolling
-		var move Vector
-		var scroll Vector
-		speedFactor := 1.0
+		m.moveAndScroll(updateDuration)
+	}
+}
 
-		for _, dir := range v.moveByKeys {
-			move.Add(dir)
-		}
-		for _, dir := range v.scrollByKeys {
-			scroll.Add(dir)
-		}
-		for _, speed := range v.speedByKeys {
-			speedFactor *= speed
-		}
+func (m *Mouse) moveAndScroll(updateDuration time.Duration) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
 
-		if move.x != 0 || move.y != 0 || scroll.x != 0 || scroll.y != 0 || v.isMoving() {
-			log.Debugf("mouse move: %v, scroll: %v", move, scroll)
+	var move Vector
+	var scroll Vector
+	speedFactor := 1.0
 
-			tickTime := updateDuration.Seconds()
-			moveSpeed := v.baseMouseSpeed * tickTime
-			scrollSpeed := v.baseScrollSpeed * tickTime
-			accelerationStep := tickTime * 1000 / v.mouseAccelerationTime
-			decelerationStep := tickTime * 1000 / v.mouseDecelerationTime
-			v.scroll(scroll.x*scrollSpeed*speedFactor, scroll.y*scrollSpeed*speedFactor)
-			v.move(
-				move.x*moveSpeed, move.y*moveSpeed, v.startMouseSpeed*tickTime,
-				v.baseMouseSpeed*tickTime,
-				v.mouseAccelerationCurve,
-				accelerationStep,
-				v.mouseDecelerationCurve,
-				decelerationStep,
-				speedFactor,
-			)
-			mouseTimer = time.NewTimer(v.mouseLoopInterval)
-		} else {
-			mouseTimer = time.NewTimer(math.MaxInt64)
-		}
+	for _, dir := range m.moveByKeys {
+		move.Add(dir)
+	}
+	for _, dir := range m.scrollByKeys {
+		scroll.Add(dir)
+	}
+	for _, speed := range m.speedByKeys {
+		speedFactor *= speed
+	}
+
+	if len(m.moveByKeys) > 0 || len(m.scrollByKeys) > 0 || m.isMoving() {
+		tickTime := updateDuration.Seconds()
+		moveSpeed := m.baseMouseSpeed * tickTime
+		scrollSpeed := m.baseScrollSpeed * tickTime
+		accelerationStep := tickTime * 1000 / m.mouseAccelerationTime
+		decelerationStep := tickTime * 1000 / m.mouseDecelerationTime
+		m.scroll(scroll.x*scrollSpeed*speedFactor, scroll.y*scrollSpeed*speedFactor)
+		m.move(
+			move.x*moveSpeed, move.y*moveSpeed, m.startMouseSpeed*tickTime,
+			m.baseMouseSpeed*tickTime,
+			m.mouseAccelerationCurve,
+			accelerationStep,
+			m.mouseDecelerationCurve,
+			decelerationStep,
+			speedFactor,
+		)
+		m.mouseLoopTimer = time.NewTimer(m.mouseLoopInterval)
+	} else {
+		m.mouseLoopTimer = nil
 	}
 }
 
 // mouseMoveChange sends a signal to the main loop that the mouse movement has changed.
-func (v *Mouse) mouseMoveChange() {
+func (m *Mouse) mouseMoveChange() {
 	select {
-	case v.mouseMoveChangeChannel <- struct{}{}:
+	case m.mouseMoveEventsChannel <- struct{}{}:
 	default:
 	}
 }
@@ -239,57 +266,54 @@ func moveTowards(
 	}
 }
 
-func (v *Mouse) move(
+func (m *Mouse) move(
 	x float64, y float64, startMouseSpeed float64, maxMouseSpeed float64,
 	accelerationCurve float64, accelerationStep float64,
 	decelerationCurve float64, decelerationStep float64,
 	speedFactor float64,
 ) {
-	log.Debugf("move called with: x=%f, y=%f, startMouseSpeed=%f, maxMouseSpeed=%f, accelerationCurve=%f, accelerationStep=%f, decelerationCurve=%f, decelerationStep=%f, speedFactor=%f",
-		x, y, startMouseSpeed, maxMouseSpeed, accelerationCurve, accelerationStep, decelerationCurve, decelerationStep, speedFactor)
-
-	v.velocity.x = moveTowards(v.velocity.x, x, maxMouseSpeed, startMouseSpeed, accelerationCurve, accelerationStep, decelerationCurve, decelerationStep)
-	v.velocity.y = moveTowards(v.velocity.y, y, maxMouseSpeed, startMouseSpeed, accelerationCurve, accelerationStep, decelerationCurve, decelerationStep)
-	v.moveFraction.x += v.velocity.x * speedFactor
-	v.moveFraction.y += v.velocity.y * speedFactor
+	m.velocity.x = moveTowards(m.velocity.x, x, maxMouseSpeed, startMouseSpeed, accelerationCurve, accelerationStep, decelerationCurve, decelerationStep)
+	m.velocity.y = moveTowards(m.velocity.y, y, maxMouseSpeed, startMouseSpeed, accelerationCurve, accelerationStep, decelerationCurve, decelerationStep)
+	m.moveFraction.x += m.velocity.x * speedFactor
+	m.moveFraction.y += m.velocity.y * speedFactor
 	// move only the integer part
-	var xInt = int32(v.moveFraction.x)
-	var yInt = int32(v.moveFraction.y)
-	v.moveFraction.x -= float64(xInt)
-	v.moveFraction.y -= float64(yInt)
+	var xInt = int32(m.moveFraction.x)
+	var yInt = int32(m.moveFraction.y)
+	m.moveFraction.x -= float64(xInt)
+	m.moveFraction.y -= float64(yInt)
 	if xInt != 0 || yInt != 0 {
 		log.Debugf("Mouse: move %v %v", xInt, yInt)
-		err := v.uinputMouse.Move(xInt, yInt)
+		err := m.uinputMouse.Move(xInt, yInt)
 		if err != nil {
 			log.Warnf("Mouse: move failed: %v", err)
 		}
 	}
 }
 
-func (v *Mouse) scroll(x float64, y float64) {
-	v.scrollFraction.x += x
-	v.scrollFraction.y += y
+func (m *Mouse) scroll(x float64, y float64) {
+	m.scrollFraction.x += x
+	m.scrollFraction.y += y
 	// move only the integer part
-	var xInt = int32(v.scrollFraction.x)
-	var yInt = int32(v.scrollFraction.y)
-	v.scrollFraction.x -= float64(xInt)
-	v.scrollFraction.y -= float64(yInt)
+	var xInt = int32(m.scrollFraction.x)
+	var yInt = int32(m.scrollFraction.y)
+	m.scrollFraction.x -= float64(xInt)
+	m.scrollFraction.y -= float64(yInt)
 	if xInt != 0 {
 		log.Debugf("Mouse: scroll horizontal: %v", xInt)
-		err := v.uinputMouse.Wheel(true, xInt)
+		err := m.uinputMouse.Wheel(true, xInt)
 		if err != nil {
 			log.Warnf("Mouse: scroll failed: %v", err)
 		}
 	}
 	if yInt != 0 {
 		log.Debugf("Mouse: scroll vertical: %v", yInt)
-		err := v.uinputMouse.Wheel(false, -yInt)
+		err := m.uinputMouse.Wheel(false, -yInt)
 		if err != nil {
 			log.Warnf("Mouse: scroll failed: %v", err)
 		}
 	}
 }
 
-func (v *Mouse) isMoving() bool {
-	return v.velocity.x != 0 || v.velocity.y != 0
+func (m *Mouse) isMoving() bool {
+	return m.velocity.x != 0 || m.velocity.y != 0
 }
