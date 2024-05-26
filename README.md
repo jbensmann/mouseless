@@ -206,7 +206,7 @@ echo "uinput" | sudo tee /etc/modules-load.d/uinput.conf
 
 ## Run at startup with systemd
 
-One option to automatically start mouseess at startup is using `systemd`, which is available in most distros.
+One option to automatically start mouseless at startup is using `systemd`, which is available in most distros.
 
 ### With root privileges
 
