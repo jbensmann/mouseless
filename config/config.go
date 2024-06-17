@@ -4,6 +4,7 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -137,7 +138,25 @@ type ExecBinding struct {
 
 // ReadConfig reads and parses the configuration from the given file.
 func ReadConfig(fileName string) (*Config, error) {
-	rawConfig, err := readRawConfig(fileName)
+	// read the file
+	configFile, err := os.Open(fileName)
+	if err != nil {
+		return nil, err
+	}
+	defer configFile.Close()
+
+	configString, err := io.ReadAll(configFile)
+	if err != nil {
+		return nil, err
+	}
+
+	return ParseConfig(configString)
+}
+
+// ParseConfig parses the given configuration.
+func ParseConfig(configBytes []byte) (*Config, error) {
+	var rawConfig RawConfig
+	err := yaml.Unmarshal(configBytes, &rawConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -176,23 +195,6 @@ func ReadConfig(fileName string) (*Config, error) {
 
 	log.Debugf("config: %+v", config)
 	return &config, nil
-}
-
-// readRawConfig reads the configuration from the given file.
-func readRawConfig(fileName string) (*RawConfig, error) {
-	var rawConfig RawConfig
-
-	file, err := os.ReadFile(fileName)
-	if err != nil {
-		return nil, err
-	}
-
-	err = yaml.Unmarshal(file, &rawConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return &rawConfig, nil
 }
 
 // parseLayer parses a single RawLayer to Layer.
