@@ -73,25 +73,24 @@ func (b *EventHandlerMock) SetNextHandler(_ EventHandler) {
 func (b *EventHandlerMock) SetLayerManager(_ LayerManager) {
 }
 
-func testConfig(t *testing.T, configStr string, tests [][]string) {
+func testHandler(t *testing.T, handler EventHandler, configStr string, tests [][]string) {
 	conf, err := config.ParseConfig([]byte(configStr))
 	if err != nil {
 		t.Fatal(fmt.Sprintf("Error parsing config: %v", err))
 	}
 	for _, test := range tests {
-		testCase(t, conf, test[0], test[1])
+		testCase(t, handler, conf, test[0], test[1])
 	}
 }
 
-func testCase(t *testing.T, conf *config.Config, events string, expectedEventBindings string) {
+func testCase(t *testing.T, handler EventHandler, conf *config.Config, events string, expectedEventBindings string) {
 	handlerMock := NewEventHandlerMock(conf)
 
-	tapHoldHandler := NewTapHoldHandler(int64(50))
-	tapHoldHandler.SetLayerManager(handlerMock)
-	tapHoldHandler.SetNextHandler(handlerMock)
+	handler.SetLayerManager(handlerMock)
+	handler.SetNextHandler(handlerMock)
 
 	// feed events in
-	feedEventsIn(tapHoldHandler, events)
+	feedEventsIn(handler, events)
 
 	// parse the expected event bindings
 	var expEventBindings []EventBinding
