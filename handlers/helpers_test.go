@@ -73,12 +73,13 @@ func (b *EventHandlerMock) SetNextHandler(_ EventHandler) {
 func (b *EventHandlerMock) SetLayerManager(_ LayerManager) {
 }
 
-func testHandler(t *testing.T, handler EventHandler, configStr string, tests [][]string) {
+func testHandler(t *testing.T, handlerGenerator func() EventHandler, configStr string, tests [][]string) {
 	conf, err := config.ParseConfig([]byte(configStr))
 	if err != nil {
 		t.Fatal(fmt.Sprintf("Error parsing config: %v", err))
 	}
 	for _, test := range tests {
+		handler := handlerGenerator()
 		testCase(t, handler, conf, test[0], test[1])
 	}
 }

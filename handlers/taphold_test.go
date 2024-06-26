@@ -16,7 +16,7 @@ layers:
 		{"Pd Pc Rd Rc", "Pd Pc Rd Rc"},
 		{"Pa:Km 15 Ra", "Pa:Km Ra"}, // event already mapped to a binding
 	}
-	handler := NewTapHoldHandler(int64(50))
+	handler := func() EventHandler { return NewTapHoldHandler(int64(50)) }
 	testHandler(t, handler, configStr, tests)
 }
 
@@ -58,7 +58,7 @@ layers:
 		{"Pb Pc 15 Rc Rb", "Pb:L2 Pc:Km Rc Rb"},
 		{"Pb Pd 15 Rd Rb", "Pb:L2 Pd:L3 Rd Rb"}, // two toggle-layer
 	}
-	handler := NewTapHoldHandler(int64(50))
+	handler := func() EventHandler { return NewTapHoldHandler(int64(50)) }
 	testHandler(t, handler, configStr, tests)
 }
 
@@ -98,7 +98,7 @@ layers:
 		{"Pb 7 Pa 7 Rb Ra", "Pb:Ky Rb Pa:Ka Ra"},
 		{"Pb 7 Pa 7 Ra Rb", "Pb:Ky Pa:Ka Ra Rb"},
 	}
-	handler := NewTapHoldHandler(int64(50))
+	handler := func() EventHandler { return NewTapHoldHandler(int64(50)) }
 	testHandler(t, handler, configStr, tests)
 }
 
@@ -138,7 +138,7 @@ layers:
 		{"Pb 7 Pa 7 Rb Ra", "Pb:Ky Rb Pa:Ka Ra"},
 		{"Pb 7 Pa 7 Ra Rb", "Pb:Ky Pa:Ka Ra Rb"},
 	}
-	handler := NewTapHoldHandler(int64(50))
+	handler := func() EventHandler { return NewTapHoldHandler(int64(50)) }
 	testHandler(t, handler, configStr, tests)
 }
 
@@ -162,6 +162,6 @@ layers:
 		{"Pa 5 Pd Ra Rd Pa 30 Ra", "Pa:Ka Pd Ra Rd Pa:Ka Ra"},
 	}
 	var quickTapTime int64 = 10
-	handler := NewTapHoldHandler(quickTapTime)
+	handler := func() EventHandler { return NewTapHoldHandler(int64(quickTapTime)) }
 	testHandler(t, handler, configStr, tests)
 }

@@ -112,6 +112,7 @@ func (t *TapHoldHandler) handleNextEvent() {
 				lastPressed, isPressed := t.lastPressed[event.Code]
 				recentlyPressed := isPressed && event.Time.Before(lastPressed.Add(time.Duration(t.quickTapTime)*time.Millisecond))
 				if recentlyPressed {
+					log.Debugf("TapHoldHandler: quick tap detected")
 					t.state = TapHoldStateTap
 				}
 			}
@@ -148,8 +149,8 @@ func (t *TapHoldHandler) handleNextEvent() {
 		t.eventHandled(0)
 	} else {
 		// state TapHoldStateWait
-		_, pressed := t.holdBackStartIsPressed[event.Code]
-		if !event.IsPress && pressed {
+		_, wasPressed := t.holdBackStartIsPressed[event.Code]
+		if !event.IsPress && wasPressed {
 			// forward a key release where the press was before the tap hold started
 			// todo: make this configurable?
 			log.Debugf("TapHoldHandler: forwarding key release %v which was pressed before the tap hold started", event.Code)
@@ -194,8 +195,8 @@ func (t *TapHoldHandler) resolveTapHold() {
 	t.eventInPosition = 0
 }
 
-// checkForTapHoldBinding checks if the given eventBinding is mapped to a TapHoldBinding in the current layer, and has
-// no other Binding attached to it.
+// checkForTapHoldBinding checks if the given eventBinding is mapped to a TapHoldBinding in the current layer or has
+// already a TapHoldBinding attached to it.
 // If the check is positive, it returns the TapHoldBinding.
 // Otherwise, it returns nil.
 func (t *TapHoldHandler) checkForTapHoldBinding(eventBinding EventBinding) (config.TapHoldBinding, bool) {
@@ -206,7 +207,6 @@ func (t *TapHoldHandler) checkForTapHoldBinding(eventBinding EventBinding) (conf
 		currentLayer := t.layerManager.CurrentLayer()
 		mappedBinding, _ = currentLayer.Bindings[eventBinding.Event.Code]
 	}
-	log.Debugf("mapped binding: %+v", mappedBinding)
 	if tapHoldBinding, ok := mappedBinding.(config.TapHoldBinding); ok {
 		return tapHoldBinding, true
 	} else {
@@ -214,6 +214,7 @@ func (t *TapHoldHandler) checkForTapHoldBinding(eventBinding EventBinding) (conf
 	}
 }
 
+// eventHandled handles the event at position and removes it from the queue.
 func (t *TapHoldHandler) eventHandled(position int) {
 	if position >= len(t.eventInQueue) {
 		log.Errorf("Unexpected interal error in eventHandled: given position %d, but len(eventInQueue) is %d",
@@ -228,6 +229,7 @@ func (t *TapHoldHandler) eventHandled(position int) {
 	t.eventInQueue = append(t.eventInQueue[:position], t.eventInQueue[position+1:]...)
 }
 
+// setKeyPressed updates the internal state of which keys are pressed.
 func (t *TapHoldHandler) setKeyPressed(event keyboard.Event) {
 	if event.IsPress {
 		t.isPressed[event.Code] = struct{}{}
