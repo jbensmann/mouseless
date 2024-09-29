@@ -53,7 +53,46 @@ For troubleshooting, you can use the --debug flag to show more verbose log messa
 
 The format of the configuration file is YAML, you do not have to know what exactly that is, just take care
 that the indentation level of the lines is correct. Lines starting with a `#` are comments.
-Here is a small example that illustrates the most features:
+Here is a minimal example with only one additional layer for mouse movement:
+
+```yaml
+# the default speed for mouse movement and scrolling
+baseMouseSpeed: 750.0
+baseScrollSpeed: 20.0
+
+# the rest of the config defines the layers with their bindings
+layers:
+  # the first layer is active at start
+  - name: initial
+    bindings:
+      # when tab is held and another key pressed, activate mouse layer
+      tab: tap-hold-next tab ; toggle-layer mouse ; 500
+      # when a is held for 300ms, activate mouse layer
+      a: tap-hold a ; toggle-layer mouse ; 300
+  # a layer for mouse movement
+  - name: mouse
+    # when true, keys that are not mapped keep their original meaning
+    passThrough: true
+    bindings:
+      # quit mouse layer
+      q: layer initial
+      # keep the mouse layer active
+      space: layer mouse
+      l: move  1  0
+      j: move -1  0
+      k: move  0  1
+      i: move  0 -1
+      p: scroll up
+      n: scroll down
+      leftalt: speed 4.0
+      e: speed 0.3
+      capslock: speed 0.1
+      f: button left
+      d: button middle
+      s: button right
+```
+
+This is another example that illustrates all available features and config options:
 
 ```yaml
 # the keyboard devices it reads from, if no devices are specified, it reads from all
