@@ -24,6 +24,8 @@ mouseDecelerationCurve: 3.0
 
 # enables auto-repeat of a tap key when pressed twice within this duration
 quickTapTime: 150
+# two keys must be pressed within this duration to activate a combo (e.g. f+d)
+comboTime: 25
 
 # the rest of the config defines the layers with their bindings
 layers:
@@ -39,6 +41,8 @@ layers:
     # switch escape with capslock
     esc: capslock
     capslock: esc
+    # key combos are activated when both keys are pressed simultaneously
+    f+d: layer mouse
 # a layer for mouse movement
 - name: mouse
   # when true, keys that are not mapped keep their original meaning

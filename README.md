@@ -82,59 +82,63 @@ mouseDecelerationCurve: 3.0
 
 # enables auto-repeat of a tap key when pressed twice within this duration
 quickTapTime: 150
+# two keys must be pressed within this duration to activate a combo (e.g. f+d)
+comboTime: 25
 
 # the rest of the config defines the layers with their bindings
 layers:
-# the first layer is active at start
-- name: initial
-  bindings:
-    # when tab is held and another key pressed, activate mouse layer
-    tab: tap-hold-next tab ; toggle-layer mouse ; 500
-    # when a is held for 300ms, activate mouse layer
-    a: tap-hold a ; toggle-layer mouse ; 300
-    # right alt key toggles arrows layer
-    rightalt: toggle-layer arrows
-    # switch escape with capslock
-    esc: capslock
-    capslock: esc
-# a layer for mouse movement
-- name: mouse
-  # when true, keys that are not mapped keep their original meaning
-  passThrough: true
-  bindings:
-    # quit mouse layer
-    q: layer initial
-    # keep the mouse layer active
-    space: layer mouse
-    r: reload-config
-    l: move  1  0
-    j: move -1  0
-    k: move  0  1
-    i: move  0 -1
-    p: scroll up
-    n: scroll down
-    leftalt: speed 4.0
-    e: speed 0.3
-    capslock: speed 0.1
-    f: button left
-    d: button middle
-    s: button right
-    # move to the top left corner
-    k0: "exec xdotool mousemove 0 0"
-# another layer for arrows and some other keys
-- name: arrows
-  passThrough: false
-  bindings:
-    e: up
-    s: left
-    d: down
-    f: right
-    q: esc
-    w: backspace
-    r: delete
-    v: enter
-    # _ is the wildcard key, which matches any key that is not mapped
-    _: rightalt+_
+  # the first layer is active at start
+  - name: initial
+    bindings:
+      # when tab is held and another key pressed, activate mouse layer
+      tab: tap-hold-next tab ; toggle-layer mouse ; 500
+      # when a is held for 300ms, activate mouse layer
+      a: tap-hold a ; toggle-layer mouse ; 300
+      # right alt key toggles arrows layer
+      rightalt: toggle-layer arrows
+      # switch escape with capslock
+      esc: capslock
+      capslock: esc
+      # key combos are activated when both keys are pressed simultaneously
+      f+d: layer mouse
+  # a layer for mouse movement
+  - name: mouse
+    # when true, keys that are not mapped keep their original meaning
+    passThrough: true
+    bindings:
+      # quit mouse layer
+      q: layer initial
+      # keep the mouse layer active
+      space: layer mouse
+      r: reload-config
+      l: move  1  0
+      j: move -1  0
+      k: move  0  1
+      i: move  0 -1
+      p: scroll up
+      n: scroll down
+      leftalt: speed 4.0
+      e: speed 0.3
+      capslock: speed 0.1
+      f: button left
+      d: button middle
+      s: button right
+      # move to the top left corner
+      k0: "exec xdotool mousemove 0 0"
+  # another layer for arrows and some other keys
+  - name: arrows
+    passThrough: false
+    bindings:
+      e: up
+      s: left
+      d: down
+      f: right
+      q: esc
+      w: backspace
+      r: delete
+      v: enter
+      # _ is the wildcard key, which matches any key that is not mapped
+      _: rightalt+_
 ```
 
 One can define an arbitrary number of layers, each with an arbitrary number of bindings, e.g. `esc: capslock`
@@ -173,6 +177,9 @@ by KMonad. The arguments of those actions have to be separated with `;`.
 | `tap-hold-next <tap action>; <hold action>; <timeout>`         | `tap-hold-next a; toggle-layer mouse; 300`         | same as tap-hold, with the addition that the tap action is executed when another key is pressed while `a` is still held down  |
 | `tap-hold-next-release <tap action>; <hold action>; <timeout>` | `tap-hold-next-release a; toggle-layer mouse; 300` | same as tap-hold, with the addition that the tap action is executed when another key is released while `a` is still held down |
 | `multi <action1>; <action2>`                                   | `multi a; toggle-layer mouse`                      | executes two or more actions at once                                                                                          |
+
+Another option to trigger actions is via key combos, e.g. `f+d: layer mouse`, which is triggered when `f` and `d` are
+pressed simultaneously. The maximum duration between the presses is defined with the `comboTime` config option.
 
 ## Custom devices
 
