@@ -20,12 +20,14 @@ const (
 type ComboHandler struct {
 	BaseHandler
 
+	mu sync.Mutex
+
 	comboTime int64
 
+	// store all incoming events in a queue first, as in the TapHoldHandler (it is never greater than 2 in this case)
 	// use pointers so that we can edit the binding
 	eventInQueue    []*EventBinding
 	eventInPosition int
-	eventHandleLock sync.Mutex
 
 	state         ComboState
 	comboTimer    *time.Timer
@@ -42,8 +44,8 @@ func NewComboHandler(comboTime int64) *ComboHandler {
 }
 
 func (c *ComboHandler) HandleEvent(event EventBinding) {
-	c.eventHandleLock.Lock()
-	defer c.eventHandleLock.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.eventInQueue = append(c.eventInQueue, &event)
 	c.handleEvents()
 }
@@ -55,16 +57,18 @@ func (c *ComboHandler) handleEvents() {
 }
 
 func (c *ComboHandler) comboTimeout() {
-	c.eventHandleLock.Lock()
-	defer c.eventHandleLock.Unlock()
-	// usually we are in the wait state, but there is a chance that it has already been resolved, but the timer has not yet been stopped
-	// todo: check if it is possible that we are already in the next wait state
-	if c.state == ComboStateWait {
-		log.Debugf("ComboHandler: tapHold timed out")
-		c.state = ComboStateNoCombo
+	timer := c.comboTimer
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-		c.comboResolved()
+	// check if the timer has been stopped while waiting for the lock
+	if timer == nil || timer != c.comboTimer {
+		return
 	}
+	log.Debugf("ComboHandler: timed out")
+	c.state = ComboStateNoCombo
+	c.comboResolved()
+	c.handleEvents()
 }
 
 func (c *ComboHandler) handleNextEvent() {
@@ -78,7 +82,7 @@ func (c *ComboHandler) handleNextEvent() {
 	if event.IsPress {
 		if isComboBinding {
 			if c.state != ComboStateWait {
-				log.Debugf("ComboHandler: activating holdBack")
+				log.Debugf("ComboHandler: waiting")
 				c.state = ComboStateWait
 				c.comboBindings = comboBindings
 
@@ -104,6 +108,7 @@ func (c *ComboHandler) handleNextEvent() {
 		if event.IsPress {
 			if binding, ok := c.comboBindings[event.Code]; ok {
 				c.eventInQueue[0].Binding = binding
+				// the second key is consumed now
 				eventBinding.Binding = config.NopBinding{}
 
 				c.state = ComboStateCombo
@@ -130,6 +135,7 @@ func (c *ComboHandler) handleNextEvent() {
 	}
 }
 
+// / comboResolved must be called after the state changed to ComboStateCombo or ComboStateNoCombo.
 func (c *ComboHandler) comboResolved() {
 	// stop the comboTimer in case it has not fired yet
 	if c.comboTimer != nil {
@@ -137,20 +143,19 @@ func (c *ComboHandler) comboResolved() {
 		c.comboTimer = nil
 	}
 
-	// the first key in holdBackEvents is the one that triggered the combo
-	comboEventBinding := c.eventInQueue[0]
+	// the first key in the queue is the one that triggered the combo
+	c.EventHandled(*c.eventInQueue[0])
 	c.eventInQueue = c.eventInQueue[1:]
 
 	if c.state == ComboStateNoCombo {
-		log.Debugf("ComboHandler: activated hold Binding")
+		log.Debugf("ComboHandler: no combo")
 	} else {
-		log.Debugf("ComboHandler: activated tap Binding")
+		log.Debugf("ComboHandler: combo triggered")
 	}
-	c.EventHandled(*comboEventBinding)
 
 	c.state = ComboStateIdle
 
-	// process from the beginning of the queue
+	// start again from the beginning of the queue
 	c.eventInPosition = 0
 }
 
@@ -164,7 +169,6 @@ func (c *ComboHandler) checkForComboBinding(eventBinding EventBinding) (map[uint
 	}
 	currentLayer := c.layerManager.CurrentLayer()
 	if comboBindings, ok := currentLayer.ComboBindings[eventBinding.Event.Code]; ok {
-		log.Debugf("mapped combo bindings: %+v", comboBindings)
 		return comboBindings, true
 	}
 	return nil, false

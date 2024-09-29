@@ -64,17 +64,18 @@ func (t *TapHoldHandler) handleEvents() {
 }
 
 func (t *TapHoldHandler) tapHoldTimeout() {
+	timer := t.tapHoldTimer
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	// usually we are in the wait state, but there is a chance that it has already been resolved, but the timer has not yet been stopped
-	// todo: check if it is possible that we are already in the next wait state
-	if t.state == TapHoldStateWait {
-		log.Debugf("TapHoldHandler: tapHold timed out")
-		t.state = TapHoldStateHold
-		t.resolveTapHold()
 
-		t.handleEvents()
+	// check if the timer has been stopped while waiting for the lock
+	if timer == nil || timer != t.tapHoldTimer {
+		return
 	}
+	log.Debugf("TapHoldHandler: tapHold timed out")
+	t.state = TapHoldStateHold
+	t.resolveTapHold()
+	t.handleEvents()
 }
 
 func (t *TapHoldHandler) handleNextEvent() {
