@@ -170,6 +170,8 @@ func parseEventBinding(eventBinding string) EventBinding {
 			binding = config.KeyBinding{KeyCombo: []uint16{code}}
 		} else if b[0] == 'L' {
 			binding = config.ToggleLayerBinding{Layer: b[1:]}
+		} else if b[0] == 'N' {
+			binding = config.NopBinding{}
 		} else {
 			panic(fmt.Sprintf("unexpected binding type %v", b[0]))
 		}
