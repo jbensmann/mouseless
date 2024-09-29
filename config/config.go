@@ -41,6 +41,7 @@ type RawConfig struct {
 	MouseDecelerationTime  float64    `yaml:"mouseDecelerationTime"`
 	BaseScrollSpeed        float64    `yaml:"baseScrollSpeed"`
 	QuickTapTime           float64    `yaml:"quickTapTime"`
+	ComboTime              float64    `yaml:"comboTime"`
 	Layers                 []RawLayer `yaml:"layers"`
 }
 
@@ -56,6 +57,7 @@ type Config struct {
 	StartCommand           string
 	MouseLoopInterval      int64
 	QuickTapTime           float64
+	ComboTime              float64
 	BaseMouseSpeed         float64
 	MouseAccelerationCurve float64
 	MouseAccelerationTime  float64
@@ -184,7 +186,11 @@ func ParseConfig(configBytes []byte) (*Config, error) {
 	config.StartMouseSpeed = rawConfig.StartMouseSpeed
 	config.BaseScrollSpeed = rawConfig.BaseScrollSpeed
 	config.QuickTapTime = rawConfig.QuickTapTime
-
+	if rawConfig.ComboTime > 0 {
+		config.ComboTime = rawConfig.ComboTime
+	} else {
+		config.ComboTime = 25
+	}
 	for i, l := range rawConfig.Layers {
 		layer, err := parseLayer(l)
 		if err != nil {

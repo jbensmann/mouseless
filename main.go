@@ -132,7 +132,7 @@ func main() {
 	tapHoldHandler.SetLayerManager(executor)
 	tapHoldHandler.SetNextHandler(defaultHandler)
 
-	comboHandler = handlers.NewComboHandler(int64(20))
+	comboHandler = handlers.NewComboHandler(int64(conf.ComboTime))
 	comboHandler.SetLayerManager(executor)
 	comboHandler.SetNextHandler(tapHoldHandler)
 
