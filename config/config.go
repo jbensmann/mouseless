@@ -242,7 +242,7 @@ func parseLayer(rawLayer RawLayer) (*Layer, error) {
 			layer.ComboBindings[codes[0]][codes[1]] = binding
 			layer.ComboBindings[codes[1]][codes[0]] = binding
 		} else {
-			//todo
+			return nil, fmt.Errorf("combos with more than 2 keys are not supported: '%v'", key)
 		}
 	}
 
