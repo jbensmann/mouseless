@@ -220,6 +220,10 @@ by KMonad. The arguments of those actions have to be separated with `;`.
 Another option to trigger actions is via key combos, e.g. `f+d: layer mouse`, which is triggered when `f` and `d` are
 pressed simultaneously. The maximum duration between the presses is defined with the `comboTime` config option.
 
+Pressing `esc` always returns to the initial layer (if not already there), which is helpful if one gets stuck or is
+unsure of the current layer. To disable this behaviour for a specific layer, you can explicitly map the key,
+e.g., `esc: esc`.
+
 ## Custom devices
 
 If you don't want mouseless to read from all keyboards, you can specify one or more devices in the configuration file.
