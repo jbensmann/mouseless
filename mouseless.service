@@ -2,6 +2,7 @@
 Description=mouseless
 
 [Service]
+ExecStartPre=/bin/sleep 2
 ExecStart=/usr/local/bin/mouseless
 
 [Install]

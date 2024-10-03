@@ -136,8 +136,6 @@ func main() {
 	comboHandler.SetLayerManager(executor)
 	comboHandler.SetNextHandler(tapHoldHandler)
 
-	// todo: wait a second here, or maybe even earlier?
-
 	if conf.StartCommand != "" {
 		log.Debugf("Executing start command: %s", conf.StartCommand)
 		cmd := exec.Command("sh", "-c", conf.StartCommand)

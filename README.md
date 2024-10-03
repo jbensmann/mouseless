@@ -263,17 +263,19 @@ One option to automatically start mouseless at startup is using `systemd`, which
 1. Download the latest release of mouseless, e.g. to `/usr/local/bin/mouseless`, and make it executable,
    e.g. `sudo chmod +x /usr/local/bin/mouseless`.
 2. Create a file called `mouseless.service` in `/etc/systemd/system/` with the following content (replace the config
-   file):
+   file path):
    ```
    [Unit]
    Description=mouseless
 
    [Service]
+   ExecStartPre=/bin/sleep 2
    ExecStart=/usr/local/bin/mouseless --config /path/to/config.yaml
 
    [Install]
    WantedBy=multi-user.target
    ```
+   The sleep command delays the start to ensure the keyboard devices are available when mouseless starts.
 3. Enable and start the service:
    ```sh
    sudo systemctl enable mouseless.service
