@@ -47,6 +47,9 @@ layers:
 - name: mouse
   # when true, keys that are not mapped keep their original meaning
   passThrough: true
+  # these commands are executed when the layer is entered/exited
+  enterCommand: "notify-send 'mouse layer entered'"
+  exitCommand: "notify-send 'mouse layer exited'"
   bindings:
     # quit mouse layer
     q: layer initial

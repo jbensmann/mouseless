@@ -46,9 +46,11 @@ type RawConfig struct {
 }
 
 type RawLayer struct {
-	Name        string            `yaml:"name"`
-	PassThrough *bool             `yaml:"passThrough"`
-	Bindings    map[string]string `yaml:"bindings"`
+	Name         string            `yaml:"name"`
+	PassThrough  *bool             `yaml:"passThrough"`
+	EnterCommand *string           `yaml:"enterCommand"`
+	ExitCommand  *string           `yaml:"exitCommand"`
+	Bindings     map[string]string `yaml:"bindings"`
 }
 
 // Config is the parsed form of RawConfig.
@@ -71,6 +73,8 @@ type Config struct {
 type Layer struct {
 	Name            string
 	PassThrough     bool // default true
+	EnterCommand    *string
+	ExitCommand     *string
 	Bindings        map[uint16]Binding
 	ComboBindings   map[uint16]map[uint16]Binding
 	WildcardBinding Binding
@@ -212,6 +216,8 @@ func parseLayer(rawLayer RawLayer) (*Layer, error) {
 	}
 
 	layer.Name = rawLayer.Name
+	layer.EnterCommand = rawLayer.EnterCommand
+	layer.ExitCommand = rawLayer.ExitCommand
 	layer.Bindings = make(map[uint16]Binding)
 	layer.ComboBindings = make(map[uint16]map[uint16]Binding)
 	if rawLayer.PassThrough == nil {
