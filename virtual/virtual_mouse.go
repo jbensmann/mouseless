@@ -52,15 +52,6 @@ type Mouse struct {
 func NewMouse(conf *config.Config) (*Mouse, error) {
 	var err error
 	v := Mouse{
-		mouseLoopInterval:      time.Duration(conf.MouseLoopInterval) * time.Millisecond,
-		baseMouseSpeed:         conf.BaseMouseSpeed,
-		baseScrollSpeed:        conf.BaseScrollSpeed,
-		startMouseSpeed:        conf.StartMouseSpeed,
-		mouseAccelerationTime:  conf.MouseAccelerationTime,
-		mouseDecelerationTime:  conf.MouseDecelerationTime,
-		mouseAccelerationCurve: conf.MouseAccelerationCurve,
-		mouseDecelerationCurve: conf.MouseDecelerationCurve,
-
 		isButtonPressed:        make(map[config.MouseButton]bool),
 		buttonsByKeys:          make(map[uint16]config.MouseButton),
 		moveByKeys:             make(map[uint16]Vector),
@@ -71,11 +62,24 @@ func NewMouse(conf *config.Config) (*Mouse, error) {
 		scrollFraction:         Vector{},
 		mouseMoveEventsChannel: make(chan struct{}, 1),
 	}
+	v.SetConfig(conf)
 	v.uinputMouse, err = uinput.CreateMouse("/dev/uinput", []byte("mouseless"))
 	if err != nil {
 		return nil, err
 	}
 	return &v, nil
+}
+
+// SetConfig updates the relevant parameters from the config file.
+func (m *Mouse) SetConfig(conf *config.Config) {
+	m.mouseLoopInterval = time.Duration(conf.MouseLoopInterval) * time.Millisecond
+	m.baseMouseSpeed = conf.BaseMouseSpeed
+	m.baseScrollSpeed = conf.BaseScrollSpeed
+	m.startMouseSpeed = conf.StartMouseSpeed
+	m.mouseAccelerationTime = conf.MouseAccelerationTime
+	m.mouseDecelerationTime = conf.MouseDecelerationTime
+	m.mouseAccelerationCurve = conf.MouseAccelerationCurve
+	m.mouseDecelerationCurve = conf.MouseDecelerationCurve
 }
 
 func (m *Mouse) StartLoop() {

@@ -31,9 +31,10 @@ var (
 	virtualMouse    *virtual.Mouse
 	virtualKeyboard *virtual.VirtualKeyboard
 
-	eventInChannel chan keyboard.Event
-	tapHoldHandler *handlers.TapHoldHandler
-	comboHandler   *handlers.ComboHandler
+	eventInChannel      chan keyboard.Event
+	tapHoldHandler      *handlers.TapHoldHandler
+	comboHandler        *handlers.ComboHandler
+	reloadConfigChannel chan struct{}
 )
 
 var opts struct {
@@ -79,6 +80,12 @@ func main() {
 	if err != nil {
 		exitError(err, "Failed to read the config file")
 	}
+	run(conf)
+}
+
+func run(conf *config.Config) {
+	eventInChannel = make(chan keyboard.Event, 1000)
+	reloadConfigChannel = make(chan struct{}, 1)
 
 	detectedKeyboardDevices := findKeyboardDevices()
 
@@ -101,6 +108,7 @@ func main() {
 	}
 
 	// init virtual mouse and keyboard
+	var err error
 	virtualMouse, err = virtual.NewMouse(conf)
 	if err != nil {
 		exitError(err, "Failed to init the virtual mouse")
@@ -113,8 +121,6 @@ func main() {
 	}
 	defer virtualKeyboard.Close()
 
-	eventInChannel = make(chan keyboard.Event, 1000)
-
 	// init keyboard devices
 	for _, dev := range conf.Devices {
 		kd := keyboard.NewKeyboardDevice(dev, eventInChannel)
@@ -122,19 +128,7 @@ func main() {
 		go kd.ReadLoop()
 	}
 
-	executor := actions.NewBindingExecutor(conf, virtualKeyboard, virtualMouse)
-
-	defaultHandler := handlers.NewDefaultHandler()
-	defaultHandler.SetLayerManager(executor)
-	defaultHandler.SetNextHandler(executor)
-
-	tapHoldHandler = handlers.NewTapHoldHandler(int64(conf.QuickTapTime))
-	tapHoldHandler.SetLayerManager(executor)
-	tapHoldHandler.SetNextHandler(defaultHandler)
-
-	comboHandler = handlers.NewComboHandler(int64(conf.ComboTime))
-	comboHandler.SetLayerManager(executor)
-	comboHandler.SetNextHandler(tapHoldHandler)
+	initHandlers(conf)
 
 	if conf.StartCommand != "" {
 		log.Debugf("Executing start command: %s", conf.StartCommand)
@@ -149,12 +143,30 @@ func main() {
 	mainLoop()
 }
 
+func initHandlers(conf *config.Config) {
+	executor := actions.NewBindingExecutor(conf, virtualKeyboard, virtualMouse, reloadConfigChannel)
+
+	defaultHandler := handlers.NewDefaultHandler()
+	defaultHandler.SetLayerManager(executor)
+	defaultHandler.SetNextHandler(executor)
+
+	tapHoldHandler = handlers.NewTapHoldHandler(int64(conf.QuickTapTime))
+	tapHoldHandler.SetLayerManager(executor)
+	tapHoldHandler.SetNextHandler(defaultHandler)
+
+	comboHandler = handlers.NewComboHandler(int64(conf.ComboTime))
+	comboHandler.SetLayerManager(executor)
+	comboHandler.SetNextHandler(tapHoldHandler)
+}
+
 func mainLoop() {
 	checkTimer := time.NewTimer(5 * time.Second)
 
 	// listen for incoming keyboard events
 	for {
 		select {
+		case <-reloadConfigChannel:
+			reloadConfig()
 		case e := <-eventInChannel:
 			comboHandler.HandleEvent(handlers.EventBinding{Event: e})
 		case <-checkTimer.C:
@@ -203,6 +215,19 @@ func findKeyboardDevices() []*evdev.InputDevice {
 		log.Debugf("- %s: %s\n", dev.Fn, dev.Name)
 	}
 	return keyboardDevices
+}
+
+// reloadConfig reloads the config file and updates the handlers.
+// But it does not reload the keyboard devices to read from.
+func reloadConfig() {
+	log.Infof("Reloading the config file: %s", configFile)
+	conf, err := config.ReadConfig(configFile)
+	if err != nil {
+		log.Warnf("Failed to read the config file: %v", err)
+		return
+	}
+	initHandlers(conf)
+	virtualMouse.SetConfig(conf)
 }
 
 func exitError(err error, msg string) {

@@ -19,31 +19,33 @@ type ExecutedBinding struct {
 }
 
 type BindingExecutor struct {
-	config       *config.Config
+	config              *config.Config
+	virtualKeyboard     *virtual.VirtualKeyboard
+	virtualMouse        *virtual.Mouse
+	reloadConfigChannel chan<- struct{}
+
 	currentLayer *config.Layer
-
-	virtualKeyboard *virtual.VirtualKeyboard
-	virtualMouse    *virtual.Mouse
-
 	// remember all keys that toggled a layer, and from which layer they came from
 	toggleLayerKeys     []uint16
 	toggleLayerPrevious []*config.Layer
+}
+
+func NewBindingExecutor(config *config.Config, virtualKeyboard *virtual.VirtualKeyboard, virtualMouse *virtual.Mouse,
+	reloadConfigChannel chan struct{}) *BindingExecutor {
+	b := BindingExecutor{
+		config:              config,
+		virtualKeyboard:     virtualKeyboard,
+		virtualMouse:        virtualMouse,
+		reloadConfigChannel: reloadConfigChannel,
+		currentLayer:        config.Layers[0],
+	}
+	return &b
 }
 
 func (b *BindingExecutor) SetNextHandler(_ handlers.EventHandler) {
 }
 
 func (b *BindingExecutor) SetLayerManager(_ handlers.LayerManager) {
-}
-
-func NewBindingExecutor(config *config.Config, virtualKeyboard *virtual.VirtualKeyboard, virtualMouse *virtual.Mouse) *BindingExecutor {
-	b := BindingExecutor{
-		config:          config,
-		currentLayer:    config.Layers[0],
-		virtualKeyboard: virtualKeyboard,
-		virtualMouse:    virtualMouse,
-	}
-	return &b
 }
 
 func (b *BindingExecutor) HandleEvent(eventBinding handlers.EventBinding) {
@@ -103,8 +105,10 @@ func (b *BindingExecutor) ExecuteBinding(binding config.Binding, causeCode uint1
 			}
 		}
 	case config.ReloadConfigBinding:
-		// todo
-		//loadConfig()
+		select {
+		case b.reloadConfigChannel <- struct{}{}:
+		default:
+		}
 	case config.ExecBinding:
 		log.Debugf("Executing: %s", t.Command)
 		cmd := exec.Command("sh", "-c", t.Command)
