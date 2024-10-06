@@ -4,7 +4,7 @@ SERVICEPATH ?= $(HOME)/.config/systemd/user
 CONFIGPATH ?= $(HOME)/.config/mouseless
 service = mouseless.service
 config = config.yaml
-example_config = ./example_configs/config_example1.yaml
+example_config = ./example_configs/config_full.yaml
 binary = mouseless
 
 clean:
