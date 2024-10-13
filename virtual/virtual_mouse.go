@@ -94,7 +94,7 @@ func (m *Mouse) ButtonPress(triggeredByKey uint16, button config.MouseButton) {
 	var err error
 	m.buttonsByKeys[triggeredByKey] = button
 	m.isButtonPressed[button] = true
-	log.Debug("Mouse: pressing %v", button)
+	log.Debugf("Mouse: pressing %v", button)
 	if button == config.ButtonLeft {
 		err = m.uinputMouse.LeftPress()
 	} else if button == config.ButtonMiddle {
