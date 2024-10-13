@@ -1,4 +1,4 @@
-name: Go
+name: Build and Release
 
 on:
   workflow_dispatch:
@@ -15,7 +15,18 @@ jobs:
         go-version: '1.22'
 
     - name: Build
-      run: go build -v ./...
+      run: build.sh
 
-    - name: Test
-      run: go test -v ./...
+    - name: Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        body: |
+          Changes in this Release
+          - First Change
+          - Second Change
+        draft: true
+        prerelease: false
