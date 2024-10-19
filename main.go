@@ -18,13 +18,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const version = "0.2.0-dev"
-
 const (
 	defaultConfigFile = ".config/mouseless/config.yaml"
 )
 
 var (
+	version    string
 	configFile string
 
 	keyboardDevices []*keyboard.Device
