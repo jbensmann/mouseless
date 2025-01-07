@@ -114,7 +114,7 @@ jumps to the arrows layer when rightalt is pressed and jumps back on release. Th
 | `layer <layer>`        | `layer mouse`                             | switches to the layer with the given name                                 |
 | `toggle-layer <layer>` | `toggle-layer mouse`                      | switches to the layer with the given name while the mapped key is pressed |
 | `move <x> <y>`         | `move 1 0`                                | moves the pointer into the given direction                                |
-| `scroll <direction>`   | `scroll up`                               | scrolls up or down                                                        |
+| `scroll <direction>`   | `scroll up`                               | scrolls (up, down, left or right)                                         |
 | `speed <multiplier>`   | `speed 2.5`                               | multiplies the pointer and scroll speeds with the given value             |
 | `button <button>`      | `button left`                             | presses a mouse button (left, right or middle)                            |
 | `exec <cmd>`           | `exec notify-send "hello from mouseless"` | executes the given command (the example sends a desktop notification)     |
