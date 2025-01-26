@@ -213,3 +213,4 @@ section `Run without root privileges`):
    ```sh
    systemctl --user enable mouseless.service
    systemctl --user start mouseless.service
+   ```
