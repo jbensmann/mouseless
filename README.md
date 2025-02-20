@@ -40,7 +40,7 @@ When successful, a binary with name `mouseless` will pop out.
 Or you can `go install` with the binary readily available in your path with your other go binaries
 
 ```shell
-go install github.com/jbensmann/mouseless@latest
+go install -ldflags="-s -w" github.com/jbensmann/mouseless@latest
 ```
 
 ## Usage
