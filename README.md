@@ -37,6 +37,12 @@ go build -ldflags="-s -w" .
 
 When successful, a binary with name `mouseless` will pop out.
 
+Or you can `go install` with the binary readily available in your path with your other go binaries
+
+```shell
+go install -ldflags="-s -w" github.com/jbensmann/mouseless@latest
+```
+
 ## Usage
 
 First you need to create a config file, e.g. `~/.config/mouseless/config.yaml`, see below for an example.
