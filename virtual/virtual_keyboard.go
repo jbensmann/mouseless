@@ -1,8 +1,8 @@
 package virtual
 
 import (
-	"github.com/bendahl/uinput"
 	"github.com/jbensmann/mouseless/config"
+	"github.com/jbensmann/uinput"
 	log "github.com/sirupsen/logrus"
 )
 

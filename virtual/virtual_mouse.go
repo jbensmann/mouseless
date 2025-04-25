@@ -1,12 +1,13 @@
 package virtual
 
 import (
-	"github.com/jbensmann/mouseless/config"
 	"math"
 	"sync"
 	"time"
 
-	"github.com/bendahl/uinput"
+	"github.com/jbensmann/mouseless/config"
+
+	"github.com/jbensmann/uinput"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -39,10 +40,11 @@ type Mouse struct {
 	scrollByKeys  map[uint16]Vector
 	speedByKeys   map[uint16]float64
 
-	isRunning      bool
-	velocity       Vector
-	moveFraction   Vector
-	scrollFraction Vector
+	isRunning             bool
+	velocity              Vector
+	moveFraction          Vector
+	scrollFraction        Vector
+	scrollFractionHighRes Vector
 
 	lock                   sync.Mutex
 	mouseLoopTimer         *time.Timer
@@ -60,6 +62,7 @@ func NewMouse(conf *config.Config) (*Mouse, error) {
 		velocity:               Vector{},
 		moveFraction:           Vector{},
 		scrollFraction:         Vector{},
+		scrollFractionHighRes:  Vector{},
 		mouseMoveEventsChannel: make(chan struct{}, 1),
 	}
 	v.SetConfig(conf)
@@ -295,27 +298,65 @@ func (m *Mouse) move(
 }
 
 func (m *Mouse) scroll(x float64, y float64) {
-	m.scrollFraction.x += x
-	m.scrollFraction.y += y
-	// move only the integer part
-	var xInt = int32(m.scrollFraction.x)
-	var yInt = int32(m.scrollFraction.y)
-	m.scrollFraction.x -= float64(xInt)
-	m.scrollFraction.y -= float64(yInt)
-	if xInt != 0 {
-		log.Debugf("Mouse: scroll horizontal: %v", xInt)
-		err := m.uinputMouse.Wheel(true, xInt)
+	// send discrete scroll events for legacy (one wheel click is one step)
+	xSteps, ySteps := getScrollingSteps(&m.scrollFractionHighRes, x, y, 120)
+	if xSteps != 0 {
+		log.Debugf("Mouse: scroll horizontal highRes: %v", xSteps)
+		err := m.uinputMouse.WheelHighRes(true, xSteps)
 		if err != nil {
 			log.Warnf("Mouse: scroll failed: %v", err)
 		}
 	}
-	if yInt != 0 {
-		log.Debugf("Mouse: scroll vertical: %v", yInt)
-		err := m.uinputMouse.Wheel(false, -yInt)
+	if ySteps != 0 {
+		log.Debugf("Mouse: scroll vertical highRes: %v", ySteps)
+		err := m.uinputMouse.WheelHighRes(false, -ySteps)
 		if err != nil {
 			log.Warnf("Mouse: scroll failed: %v", err)
 		}
 	}
+	// with high-resolution scrolling events, one wheel click corresponds to 120
+	// high-resolution steps
+	xSteps, ySteps = getScrollingSteps(&m.scrollFraction, x, y, 1)
+	if xSteps != 0 {
+		log.Debugf("Mouse: scroll horizontal: %v", xSteps)
+		err := m.uinputMouse.Wheel(true, xSteps)
+		if err != nil {
+			log.Warnf("Mouse: scroll failed: %v", err)
+		}
+	}
+	if ySteps != 0 {
+		log.Debugf("Mouse: scroll vertical: %v", ySteps)
+		err := m.uinputMouse.Wheel(false, -ySteps)
+		if err != nil {
+			log.Warnf("Mouse: scroll failed: %v", err)
+		}
+	}
+}
+
+// getScrollingSteps calculates discrete scroll steps from fractional input.
+// scrollFraction accumulates leftover fractional scrolls.
+// x and y specify the scroll deltas in each direction.
+// stepCount determines the resolution for conversion to discrete steps (e.g., a
+// value of 10 would mean that x=1.0 or y=1.0 would result in 10 scroll steps).
+func getScrollingSteps(scrollFraction *Vector, x float64, y float64, stepCount int32) (int32, int32) {
+	// when the direction changes, start at 0 again
+	if x > 0 {
+		scrollFraction.x = max(scrollFraction.x, 0)
+	} else if x < 0 {
+		scrollFraction.x = min(scrollFraction.x, 0)
+	}
+	if y > 0 {
+		scrollFraction.y = max(scrollFraction.y, 0)
+	} else if y < 0 {
+		scrollFraction.y = min(scrollFraction.y, 0)
+	}
+	scrollFraction.x += x
+	scrollFraction.y += y
+	var xSteps = int32(scrollFraction.x * float64(stepCount))
+	var ySteps = int32(scrollFraction.y * float64(stepCount))
+	scrollFraction.x -= float64(xSteps) / float64(stepCount)
+	scrollFraction.y -= float64(ySteps) / float64(stepCount)
+	return xSteps, ySteps
 }
 
 func (m *Mouse) isMoving() bool {
