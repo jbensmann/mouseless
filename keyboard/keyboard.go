@@ -116,3 +116,7 @@ func (k *Device) IsOpen() bool {
 func (k *Device) LastOpenError() string {
 	return k.lastOpenError
 }
+
+func (k *Device) Device() *evdev.InputDevice {
+	return k.device
+}

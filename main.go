@@ -11,8 +11,10 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"strings"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	evdev "github.com/gvalkov/golang-evdev"
 	"github.com/jessevdk/go-flags"
 	log "github.com/sirupsen/logrus"
@@ -85,6 +87,7 @@ func main() {
 func run(conf *config.Config) {
 	eventInChannel = make(chan keyboard.Event, 1000)
 	reloadConfigChannel = make(chan struct{}, 1)
+	var specifiedDevices = conf.Devices
 
 	detectedKeyboardDevices := findKeyboardDevices()
 
@@ -142,6 +145,8 @@ func run(conf *config.Config) {
 			exitError(err, "Execution of start command failed")
 		}
 	}
+
+	go watchForKeyboardDevices(specifiedDevices)
 
 	virtualMouse.StartLoop()
 	mainLoop()
@@ -235,6 +240,86 @@ func exitError(err error, msg string) {
 	}
 	log.Error("Exiting")
 	os.Exit(1)
+}
+
+func watchForKeyboardDevices(specifiedDevices []string) error {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return err
+	}
+	defer watcher.Close()
+
+	err = watcher.Add("/dev/input")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for {
+		select {
+		case e, ok := <-watcher.Events:
+			if !ok {
+				return nil
+			}
+
+			if e.Op&fsnotify.Create != fsnotify.Create {
+				continue
+			}
+
+			if len(specifiedDevices) > 0 {
+				matched := false
+				for _, device := range specifiedDevices {
+					if e.Name == device {
+						matched = true
+						break
+					}
+				}
+				if !matched {
+					continue
+				}
+			} else if !strings.HasPrefix(e.Name, "/dev/input/event") {
+				continue
+			}
+
+			log.Infof("New device detected: %s", e.Name)
+
+			// Check if the device is already in the list if so
+			// remove it, because you one can't be sure it's the
+			// same device anyway.
+			for i, dev := range keyboardDevices {
+				if dev.DeviceName() == e.Name {
+					log.Debugf("Remove old device %v", dev.DeviceName())
+					keyboardDevices = append(keyboardDevices[:i], keyboardDevices[i+1:]...)
+					break
+				}
+			}
+
+			// wait for udev to fix permissions
+			// otherwise you can get permission denied on Open()
+			time.Sleep(1 * time.Second)
+
+			var device *evdev.InputDevice
+			device, err = evdev.Open(e.Name)
+			if err != nil {
+				log.Warnf("Failed to open device %s: %v", e.Name, err)
+				continue
+			}
+
+			if !isKeyboardDevice(device) {
+				log.Debugf("New device was not a keyboard")
+				continue
+			}
+
+			log.Infof("Adding new device: %s", e.Name)
+			kd := keyboard.NewKeyboardDevice(device, eventInChannel)
+			keyboardDevices = append(keyboardDevices, kd)
+			kd.GrabDevice()
+		case err, ok := <-watcher.Errors:
+			if !ok {
+				return nil
+			}
+			log.Println("Watcher error:", err)
+		}
+	}
 }
 
 func isKeyboardDevice(dev *evdev.InputDevice) bool {
