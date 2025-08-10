@@ -201,15 +201,8 @@ func findKeyboardDevices() []*evdev.InputDevice {
 	// filter out the keyboard devices that have at least an A key or a 1 key
 	var keyboardDevices []*evdev.InputDevice
 	for _, dev := range devices {
-		for capType, codes := range dev.Capabilities {
-			if capType.Type == evdev.EV_KEY {
-				for _, code := range codes {
-					if code.Code == evdev.KEY_A || code.Code == evdev.KEY_KP1 {
-						keyboardDevices = append(keyboardDevices, dev)
-						break
-					}
-				}
-			}
+		if isKeyboardDevice(dev) {
+			keyboardDevices = append(keyboardDevices, dev)
 		}
 	}
 
@@ -242,4 +235,17 @@ func exitError(err error, msg string) {
 	}
 	log.Error("Exiting")
 	os.Exit(1)
+}
+
+func isKeyboardDevice(dev *evdev.InputDevice) bool {
+	for capType, codes := range dev.Capabilities {
+		if capType.Type == evdev.EV_KEY {
+			for _, code := range codes {
+				if code.Code == evdev.KEY_A || code.Code == evdev.KEY_KP1 {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
