@@ -122,9 +122,14 @@ func run(conf *config.Config) {
 
 	// init keyboard devices
 	for _, dev := range conf.Devices {
-		kd := keyboard.NewKeyboardDevice(dev, eventInChannel)
-		keyboardDevices = append(keyboardDevices, kd)
-		go kd.ReadLoop()
+		for _, device := range detectedKeyboardDevices {
+			if dev == device.Fn {
+				kd := keyboard.NewKeyboardDevice(device, eventInChannel)
+				keyboardDevices = append(keyboardDevices, kd)
+				kd.GrabDevice()
+			}
+		}
+
 	}
 
 	initHandlers(conf)
