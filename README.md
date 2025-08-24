@@ -149,11 +149,32 @@ e.g., `esc: esc`.
 ## Custom devices
 
 If you don't want mouseless to read from all keyboards, you can specify one or more devices in the configuration file.
-Most devices have `kbd` in their name, so you can use the following commands to find possible candidates:
+You can specify devices by their path or by their name.
+
+To find available devices, you can use the `--list-devices` flag:
+
+```shell
+sudo mouseless --list-devices
+```
+
+This will show all input devices with their names and paths. You can also use these commands to find possibles
+candidates:
 
 ```shell
 ls /dev/input/by-id/*kbd*
 ls /dev/input/by-path/*kbd*
+```
+
+### Device specification format
+
+In your config file, you can then specify devices by their path or name:
+
+```yaml
+devices:
+# by path
+- "/dev/input/by-id/usb-1234_5678-event-kbd"
+# by name
+- "Some keyboard name"
 ```
 
 ## Run without root privileges
