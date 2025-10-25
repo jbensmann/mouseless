@@ -29,15 +29,15 @@ There are various reasons why one would want to control the mouse with the keybo
 
 The simplest way is to download a binary from [Releases](https://github.com/jbensmann/mouseless/releases).
 
-Or you can build it from source (requires that go is installed):
+Or you can build it from source, first clone the repository and then build it with:
 
 ```shell
 go build -ldflags="-s -w" .
 ```
 
-When successful, a binary with name `mouseless` will pop out.
+When successful, there should be a binary called `mouseless` in the current directory.
 
-Or you can `go install` with the binary readily available in your path with your other go binaries
+Or you can `go install` it, which puts the binary in your `$GOPATH/bin` directory (default is `$HOME/go/bin`):
 
 ```shell
 go install -ldflags="-s -w" github.com/jbensmann/mouseless@latest
@@ -57,8 +57,9 @@ For troubleshooting, you can use the --debug flag to show more verbose log messa
 
 ## Configuration
 
-The format of the configuration file is YAML, you do not have to know what exactly that is, just take care
-that the indentation level of the lines is correct. Lines starting with a `#` are comments.
+The configuration file is in YAML format, you do not need to know exactly what that means, just make sure
+that the indentation level of the lines is correct.
+Lines starting with a `#` are comments.
 Here is a minimal example with only one additional layer for mouse movement:
 
 ```yaml
@@ -68,37 +69,37 @@ baseScrollSpeed: 20.0
 
 # the rest of the config defines the layers with their bindings
 layers:
-  # the first layer is active at start
-  - name: initial
-    bindings:
-      # when tab is held and another key pressed, activate mouse layer
-      tab: tap-hold-next tab ; toggle-layer mouse ; 500
-      # when a is held for 300ms, activate mouse layer
-      a: tap-hold a ; toggle-layer mouse ; 300
-  # a layer for mouse movement
-  - name: mouse
-    # when true, keys that are not mapped keep their original meaning
-    passThrough: true
-    bindings:
-      # quit mouse layer
-      q: layer initial
-      # keep the mouse layer active
-      space: layer mouse
-      l: move  1  0
-      j: move -1  0
-      k: move  0  1
-      i: move  0 -1
-      p: scroll up
-      n: scroll down
-      leftalt: speed 4.0
-      e: speed 0.3
-      capslock: speed 0.1
-      f: button left
-      d: button middle
-      s: button right
+# the first layer is active at start
+- name: initial
+  bindings:
+    # when tab is held and another key pressed, activate mouse layer
+    tab: tap-hold-next tab ; toggle-layer mouse ; 500
+    # when a is held for 300ms, activate mouse layer
+    a: tap-hold a ; toggle-layer mouse ; 300
+# a layer for mouse movement
+- name: mouse
+  # when true, keys that are not mapped keep their original meaning
+  passThrough: true
+  bindings:
+    # quit mouse layer
+    q: layer initial
+    # keep the mouse layer active
+    space: layer mouse
+    l: move  1  0
+    j: move -1  0
+    k: move  0  1
+    i: move  0 -1
+    p: scroll up
+    n: scroll down
+    leftalt: speed 4.0
+    e: speed 0.3
+    capslock: speed 0.1
+    f: button left
+    d: button middle
+    s: button right
 ```
 
-Here you can find a more comprehensive example that illustrates most available features and config
+Here you can also find a more comprehensive example that illustrates most available features and config
 options: [config_full.yaml](./example_configs/config_full.yaml)
 
 One can define an arbitrary number of layers, each with an arbitrary number of bindings, e.g. `esc: capslock`
@@ -148,11 +149,32 @@ e.g., `esc: esc`.
 ## Custom devices
 
 If you don't want mouseless to read from all keyboards, you can specify one or more devices in the configuration file.
-Most devices have `kbd` in their name, so you can use the following commands to find possible candidates:
+You can specify devices by their path or by their name.
+
+To find available devices, you can use the `--list-devices` flag:
+
+```shell
+sudo mouseless --list-devices
+```
+
+This will show all input devices with their names and paths. You can also use these commands to find possibles
+candidates:
 
 ```shell
 ls /dev/input/by-id/*kbd*
 ls /dev/input/by-path/*kbd*
+```
+
+### Device specification format
+
+In your config file, you can then specify devices by their path or name:
+
+```yaml
+devices:
+# by path
+- "/dev/input/by-id/usb-1234_5678-event-kbd"
+# by name
+- "Some keyboard name"
 ```
 
 ## Run without root privileges
@@ -185,6 +207,7 @@ One option to automatically start mouseless at startup is using `systemd`, which
    e.g. `sudo chmod +x /usr/local/bin/mouseless`.
 2. Create a file called `mouseless.service` in `/etc/systemd/system/` with the following content (replace the config
    file path):
+
    ```
    [Unit]
    Description=mouseless
@@ -196,7 +219,9 @@ One option to automatically start mouseless at startup is using `systemd`, which
    [Install]
    WantedBy=multi-user.target
    ```
+
    The sleep command delays the start to ensure the keyboard devices are available when mouseless starts.
+
 3. Enable and start the service:
    ```sh
    sudo systemctl enable mouseless.service
@@ -219,3 +244,4 @@ section `Run without root privileges`):
    ```sh
    systemctl --user enable mouseless.service
    systemctl --user start mouseless.service
+   ```

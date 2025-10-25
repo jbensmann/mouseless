@@ -2,11 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/jbensmann/mouseless/actions"
-	"github.com/jbensmann/mouseless/config"
-	"github.com/jbensmann/mouseless/handlers"
-	"github.com/jbensmann/mouseless/keyboard"
-	"github.com/jbensmann/mouseless/virtual"
 	"os"
 	"os/exec"
 	"os/user"
@@ -15,6 +10,12 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/jbensmann/mouseless/actions"
+	"github.com/jbensmann/mouseless/config"
+	"github.com/jbensmann/mouseless/handlers"
+	"github.com/jbensmann/mouseless/keyboard"
+	"github.com/jbensmann/mouseless/virtual"
+
 	evdev "github.com/gvalkov/golang-evdev"
 	"github.com/jessevdk/go-flags"
 	log "github.com/sirupsen/logrus"
@@ -39,9 +40,10 @@ var (
 )
 
 var opts struct {
-	Version    bool   `short:"v" long:"version" description:"Show the version"`
-	Debug      bool   `short:"d" long:"debug" description:"Show verbose debug information"`
-	ConfigFile string `short:"c" long:"config" description:"The config file"`
+	Version     bool   `short:"v" long:"version" description:"Show the version"`
+	Debug       bool   `short:"d" long:"debug" description:"Show verbose debug information"`
+	ConfigFile  string `short:"c" long:"config" description:"The config file"`
+	ListDevices bool   `long:"list-devices" description:"List all found devices with their capabilities"`
 }
 
 func main() {
@@ -54,6 +56,11 @@ func main() {
 
 	if opts.Version {
 		fmt.Println(version)
+		os.Exit(0)
+	}
+
+	if opts.ListDevices {
+		listAllDevices()
 		os.Exit(0)
 	}
 
@@ -109,8 +116,13 @@ func run(conf *config.Config) {
 		}
 	}
 
+	// resolve device specifications to paths
+	devicePaths, err := conf.GetDevicePaths()
+	if err != nil {
+		exitError(err, "Failed to resolve device specifications")
+	}
+
 	// init virtual mouse and keyboard
-	var err error
 	virtualMouse, err = virtual.NewMouse(conf)
 	if err != nil {
 		exitError(err, "Failed to init the virtual mouse")
@@ -200,23 +212,43 @@ func mainLoop() {
 
 // findKeyboardDevices finds all available keyboard input devices.
 func findKeyboardDevices() []*evdev.InputDevice {
-	var devices []*evdev.InputDevice
-	devices, _ = evdev.ListInputDevices("/dev/input/event*")
+	devices, _ := evdev.ListInputDevices("/dev/input/event*")
 
-	// filter out the keyboard devices that have at least an A key or a 1 key
 	var keyboardDevices []*evdev.InputDevice
+	log.Debugf("Auto detected keyboard devices:")
+	for _, dev := range devices {
+		if isKeyboardDevice(dev) {
+			keyboardDevices = append(keyboardDevices, dev)
+			log.Debugf("- %s: %s\n", dev.Fn, dev.Name)
+		}
+	}
+	return keyboardDevices
+}
+
+// listAllDevices prints all input devices with their capabilities.
+func listAllDevices() {
+	devices, _ := evdev.ListInputDevices("/dev/input/event*")
+
 	for _, dev := range devices {
 		if isKeyboardDevice(dev) {
 			keyboardDevices = append(keyboardDevices, dev)
 		}
 	}
+}
 
-	// print the keyboard devices
-	log.Debugf("Auto detected keyboard devices:")
-	for _, dev := range keyboardDevices {
-		log.Debugf("- %s: %s\n", dev.Fn, dev.Name)
+// isKeyboardDevice checks if the given device is a keyboard by checking if
+// it has at least an A key or a 1 key.
+func isKeyboardDevice(dev *evdev.InputDevice) bool {
+	for capType, codes := range dev.Capabilities {
+		if capType.Type == evdev.EV_KEY {
+			for _, code := range codes {
+				if code.Code == evdev.KEY_A || code.Code == evdev.KEY_KP1 {
+					return true
+				}
+			}
+		}
 	}
-	return keyboardDevices
+	return false
 }
 
 // reloadConfig reloads the config file and updates the handlers.

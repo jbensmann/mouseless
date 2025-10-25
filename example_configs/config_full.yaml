@@ -1,6 +1,8 @@
 # the keyboard devices it reads from, if no devices are specified, it reads from all
+# one can either specify the path of device, or the device name
 devices:
-# - "/dev/input/by-id/SOME_KEYBOARD_REPLACE_ME-event-kbd"
+# - "/dev/input/by-id/usb-1234_5678-event-kbd"
+# - "Name of keyboard"
 
 # this is executed when mouseless starts, e.g. useful for setting the keyboard layout
 # startCommand: "setxkbmap de"
