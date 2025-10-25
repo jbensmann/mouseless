@@ -6,8 +6,10 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"strings"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/jbensmann/mouseless/actions"
 	"github.com/jbensmann/mouseless/config"
 	"github.com/jbensmann/mouseless/handlers"
@@ -92,6 +94,7 @@ func main() {
 func run(conf *config.Config) {
 	eventInChannel = make(chan keyboard.Event, 1000)
 	reloadConfigChannel = make(chan struct{}, 1)
+	var specifiedDevices = conf.Devices
 
 	detectedKeyboardDevices := findKeyboardDevices()
 
@@ -133,10 +136,15 @@ func run(conf *config.Config) {
 	defer virtualKeyboard.Close()
 
 	// init keyboard devices
-	for _, dev := range devicePaths {
-		kd := keyboard.NewKeyboardDevice(dev, eventInChannel)
-		keyboardDevices = append(keyboardDevices, kd)
-		go kd.ReadLoop()
+	for _, dev := range conf.Devices {
+		for _, device := range detectedKeyboardDevices {
+			if dev == device.Fn {
+				kd := keyboard.NewKeyboardDevice(device, eventInChannel)
+				keyboardDevices = append(keyboardDevices, kd)
+				kd.GrabDevice()
+			}
+		}
+
 	}
 
 	initHandlers(conf)
@@ -149,6 +157,8 @@ func run(conf *config.Config) {
 			exitError(err, "Execution of start command failed")
 		}
 	}
+
+	go watchForKeyboardDevices(specifiedDevices)
 
 	virtualMouse.StartLoop()
 	mainLoop()
@@ -220,17 +230,8 @@ func listAllDevices() {
 	devices, _ := evdev.ListInputDevices("/dev/input/event*")
 
 	for _, dev := range devices {
-		fmt.Printf("\nDevice: %s (%s)\n", dev.Name, dev.Fn)
-		fmt.Printf("Detected as keyboard: %t\n", isKeyboardDevice(dev))
-		fmt.Println("Capabilities:")
-		for capType, codes := range dev.Capabilities {
-			fmt.Printf("  %v: ", capType)
-			if len(codes) > 10 {
-				// print only first 10 codes
-				fmt.Printf("%v ... (%d more)\n", codes[:10], len(codes)-10)
-			} else {
-				fmt.Printf("%v\n", codes)
-			}
+		if isKeyboardDevice(dev) {
+			keyboardDevices = append(keyboardDevices, dev)
 		}
 	}
 }
@@ -271,4 +272,97 @@ func exitError(err error, msg string) {
 	}
 	log.Error("Exiting")
 	os.Exit(1)
+}
+
+func watchForKeyboardDevices(specifiedDevices []string) error {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return err
+	}
+	defer watcher.Close()
+
+	err = watcher.Add("/dev/input")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for {
+		select {
+		case e, ok := <-watcher.Events:
+			if !ok {
+				return nil
+			}
+
+			if e.Op&fsnotify.Create != fsnotify.Create {
+				continue
+			}
+
+			if len(specifiedDevices) > 0 {
+				matched := false
+				for _, device := range specifiedDevices {
+					if e.Name == device {
+						matched = true
+						break
+					}
+				}
+				if !matched {
+					continue
+				}
+			} else if !strings.HasPrefix(e.Name, "/dev/input/event") {
+				continue
+			}
+
+			log.Infof("New device detected: %s", e.Name)
+
+			// Check if the device is already in the list if so
+			// remove it, because you one can't be sure it's the
+			// same device anyway.
+			for i, dev := range keyboardDevices {
+				if dev.DeviceName() == e.Name {
+					log.Debugf("Remove old device %v", dev.DeviceName())
+					keyboardDevices = append(keyboardDevices[:i], keyboardDevices[i+1:]...)
+					break
+				}
+			}
+
+			// wait for udev to fix permissions
+			// otherwise you can get permission denied on Open()
+			time.Sleep(1 * time.Second)
+
+			var device *evdev.InputDevice
+			device, err = evdev.Open(e.Name)
+			if err != nil {
+				log.Warnf("Failed to open device %s: %v", e.Name, err)
+				continue
+			}
+
+			if !isKeyboardDevice(device) {
+				log.Debugf("New device was not a keyboard")
+				continue
+			}
+
+			log.Infof("Adding new device: %s", e.Name)
+			kd := keyboard.NewKeyboardDevice(device, eventInChannel)
+			keyboardDevices = append(keyboardDevices, kd)
+			kd.GrabDevice()
+		case err, ok := <-watcher.Errors:
+			if !ok {
+				return nil
+			}
+			log.Println("Watcher error:", err)
+		}
+	}
+}
+
+func isKeyboardDevice(dev *evdev.InputDevice) bool {
+	for capType, codes := range dev.Capabilities {
+		if capType.Type == evdev.EV_KEY {
+			for _, code := range codes {
+				if code.Code == evdev.KEY_A || code.Code == evdev.KEY_KP1 {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
