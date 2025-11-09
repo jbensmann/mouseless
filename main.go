@@ -30,8 +30,9 @@ const (
 var (
 	version string // set during build
 
-	configFile    string
-	configDevices []string
+	configFile           string
+	configDevices        []string
+	configDevicesExclude []string
 
 	keyboardDevices []*keyboard.Device
 	virtualMouse    *virtual.Mouse
@@ -92,6 +93,7 @@ func main() {
 		exitError("Failed to read the config file", err)
 	}
 	configDevices = conf.Devices
+	configDevicesExclude = conf.DevicesExclude
 	run(conf)
 }
 
@@ -384,22 +386,45 @@ func printTable(headers []string, rows [][]string) {
 }
 
 // shallDeviceBeUsed checks if the given device should be used.
-// If devices are specified in the config file, it checks if the device is specified by name or path.
-// Otherwise, it just checks if the device is a keyboard.
+// This is the case if these two conditions are met:
+// 1. (config.devices is empty and device is a keyboard) or (device is listed in config.devices)
+// 2. device is not listed in config.devicesExclude
 func shallDeviceBeUsed(device *evdev.InputDevice) bool {
 	if len(configDevices) == 0 {
-		return isKeyboardDevice(device)
-	}
-	for _, deviceConfig := range configDevices {
-		if deviceConfig == device.Fn || deviceConfig == device.Name {
-			return true
+		if !isKeyboardDevice(device) {
+			return false
 		}
-		// if it is a symlink, resolve it and check if the resolved path matches
-		dest, err := filepath.EvalSymlinks(deviceConfig)
-		if err == nil {
-			if dest == device.Fn {
-				return true
+	} else {
+		anyMatches := false
+		for _, deviceConfig := range configDevices {
+			if deviceMatches(device, deviceConfig) {
+				anyMatches = true
+				break
 			}
+		}
+		if !anyMatches {
+			return false
+		}
+	}
+	for _, deviceConfig := range configDevicesExclude {
+		if deviceMatches(device, deviceConfig) {
+			return false
+		}
+	}
+	return true
+}
+
+// deviceMatches checks if the given device matches the given deviceConfig by checking if
+// it matches either the device name or the device path.
+func deviceMatches(device *evdev.InputDevice, deviceConfig string) bool {
+	if deviceConfig == device.Fn || deviceConfig == device.Name {
+		return true
+	}
+	// if it is a symlink, resolve it and check if the resolved path matches
+	dest, err := filepath.EvalSymlinks(deviceConfig)
+	if err == nil {
+		if dest == device.Fn {
+			return true
 		}
 	}
 	return false

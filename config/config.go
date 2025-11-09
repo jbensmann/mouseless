@@ -32,6 +32,7 @@ const (
 // RawConfig defines the structure of the config file.
 type RawConfig struct {
 	Devices                []string   `yaml:"devices"`
+	DevicesExclude         []string   `yaml:"devicesExclude"`
 	StartCommand           string     `yaml:"startCommand"`
 	MouseLoopInterval      int64      `yaml:"mouseLoopInterval"`
 	BaseMouseSpeed         float64    `yaml:"baseMouseSpeed"`
@@ -57,6 +58,7 @@ type RawLayer struct {
 // Config is the parsed form of RawConfig.
 type Config struct {
 	Devices                []string
+	DevicesExclude         []string
 	StartCommand           string
 	MouseLoopInterval      int64
 	QuickTapTime           float64
@@ -173,6 +175,7 @@ func ParseConfig(configBytes []byte) (*Config, error) {
 		MouseDecelerationCurve: 1.0,
 	}
 	config.Devices = rawConfig.Devices
+	config.DevicesExclude = rawConfig.DevicesExclude
 	config.StartCommand = rawConfig.StartCommand
 	if rawConfig.MouseLoopInterval > 0 {
 		config.MouseLoopInterval = rawConfig.MouseLoopInterval

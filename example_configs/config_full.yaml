@@ -1,8 +1,14 @@
-# the keyboard devices it reads from, if no devices are specified, it reads from all
-# one can either specify the path of device, or the device name
+# the keyboard devices to read from, if left empty, it reads from all keyboards
+# one can either specify the name or path of the device (preferably the name, as the path might change)
+# run `mouseless -l` to see all available devices
 devices:
-# - "/dev/input/by-id/usb-1234_5678-event-kbd"
 # - "Name of keyboard"
+# - "/dev/input/by-id/usb-1234_5678-event-kbd"
+
+# one can also exclude specific devices with this option
+devicesExclude:
+# - "Name of keyboard"
+# - "/dev/input/by-id/usb-1234_5678-event-kbd"
 
 # this is executed when mouseless starts, e.g. useful for setting the keyboard layout
 # startCommand: "setxkbmap de"
