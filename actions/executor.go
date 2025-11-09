@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"os"
+	"os/exec"
+
 	"github.com/jbensmann/mouseless/config"
 	"github.com/jbensmann/mouseless/handlers"
 	"github.com/jbensmann/mouseless/keyboard"
 	"github.com/jbensmann/mouseless/virtual"
 	log "github.com/sirupsen/logrus"
-	"os"
-	"os/exec"
 )
 
 type ExecutedBinding struct {
@@ -18,9 +19,9 @@ type ExecutedBinding struct {
 	binding config.Binding
 }
 
-type BindingExecutor struct {
+type Executor struct {
 	config              *config.Config
-	virtualKeyboard     *virtual.VirtualKeyboard
+	virtualKeyboard     *virtual.Keyboard
 	virtualMouse        *virtual.Mouse
 	reloadConfigChannel chan<- struct{}
 
@@ -30,9 +31,13 @@ type BindingExecutor struct {
 	toggleLayerPrevious []*config.Layer
 }
 
-func NewBindingExecutor(config *config.Config, virtualKeyboard *virtual.VirtualKeyboard, virtualMouse *virtual.Mouse,
-	reloadConfigChannel chan struct{}) *BindingExecutor {
-	b := BindingExecutor{
+func NewExecutor(
+	config *config.Config,
+	virtualKeyboard *virtual.Keyboard,
+	virtualMouse *virtual.Mouse,
+	reloadConfigChannel chan struct{},
+) *Executor {
+	b := Executor{
 		config:              config,
 		virtualKeyboard:     virtualKeyboard,
 		virtualMouse:        virtualMouse,
@@ -42,13 +47,13 @@ func NewBindingExecutor(config *config.Config, virtualKeyboard *virtual.VirtualK
 	return &b
 }
 
-func (b *BindingExecutor) SetNextHandler(_ handlers.EventHandler) {
+func (b *Executor) SetNextHandler(_ handlers.EventHandler) {
 }
 
-func (b *BindingExecutor) SetLayerManager(_ handlers.LayerManager) {
+func (b *Executor) SetLayerManager(_ handlers.LayerManager) {
 }
 
-func (b *BindingExecutor) HandleEvent(eventBinding handlers.EventBinding) {
+func (b *Executor) HandleEvent(eventBinding handlers.EventBinding) {
 	if eventBinding.Binding != nil {
 		b.ExecuteBinding(eventBinding.Binding, eventBinding.Event.Code)
 	}
@@ -57,7 +62,7 @@ func (b *BindingExecutor) HandleEvent(eventBinding handlers.EventBinding) {
 	}
 }
 
-func (b *BindingExecutor) ExecuteBinding(binding config.Binding, causeCode uint16) {
+func (b *Executor) ExecuteBinding(binding config.Binding, causeCode uint16) {
 	log.Debugf("Executing %T: %+v", binding, binding)
 
 	switch t := binding.(type) {
@@ -129,15 +134,15 @@ func (b *BindingExecutor) ExecuteBinding(binding config.Binding, causeCode uint1
 	}
 }
 
-func (b *BindingExecutor) CurrentLayer() *config.Layer {
+func (b *Executor) CurrentLayer() *config.Layer {
 	return b.currentLayer
 }
 
-func (b *BindingExecutor) BaseLayer() *config.Layer {
+func (b *Executor) BaseLayer() *config.Layer {
 	return b.config.Layers[0]
 }
 
-func (b *BindingExecutor) KeyReleased(code uint16) {
+func (b *Executor) KeyReleased(code uint16) {
 	// go back to the previous layer when toggleLayerKey is released
 	for i, key := range b.toggleLayerKeys {
 		if key == code {
@@ -155,7 +160,7 @@ func (b *BindingExecutor) KeyReleased(code uint16) {
 }
 
 // goToLayer switches to the given layer and executes the appropriate exit and enter commands if set.
-func (b *BindingExecutor) goToLayer(layer *config.Layer) {
+func (b *Executor) goToLayer(layer *config.Layer) {
 	executeCommandIfNotEmpty(b.currentLayer.ExitCommand)
 	log.Debugf("Switching to layer %v", layer.Name)
 	b.currentLayer = layer
@@ -163,19 +168,20 @@ func (b *BindingExecutor) goToLayer(layer *config.Layer) {
 }
 
 func executeCommandIfNotEmpty(command *string) {
-	if command != nil && *command != "" {
-		log.Debugf("Executing command: %s", *command)
-		cmd := exec.Command("sh", "-c", *command)
-		var stderr bytes.Buffer
-		cmd.Stderr = &stderr
-		err := cmd.Run()
-		if err != nil {
-			var exitError *exec.ExitError
-			if errors.As(err, &exitError) {
-				log.Warnf("Execution of command '%s' failed: %v, stderr: %s", *command, err, stderr.String())
-			} else {
-				log.Warnf("Execution of command '%s' failed: %v", *command, err)
-			}
+	if command == nil || *command == "" {
+		return
+	}
+	log.Debugf("Executing command: %s", *command)
+	cmd := exec.Command("sh", "-c", *command)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err != nil {
+		var exitError *exec.ExitError
+		if errors.As(err, &exitError) {
+			log.Warnf("Execution of command '%s' failed: %v", *command, err)
+		} else {
+			log.Warnf("Execution of command '%s' failed: %v, stderr: %s", *command, err, stderr.String())
 		}
 	}
 }

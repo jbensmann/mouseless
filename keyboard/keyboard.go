@@ -1,9 +1,12 @@
 package keyboard
 
 import (
+	"errors"
 	"fmt"
-	"github.com/jbensmann/mouseless/config"
+	"io/fs"
 	"time"
+
+	"github.com/jbensmann/mouseless/config"
 
 	evdev "github.com/gvalkov/golang-evdev"
 	log "github.com/sirupsen/logrus"
@@ -15,14 +18,6 @@ type Event struct {
 	Time    time.Time
 }
 
-type Device struct {
-	deviceName    string
-	device        *evdev.InputDevice
-	state         DeviceState
-	lastOpenError string
-	eventChan     chan<- Event
-}
-
 type DeviceState int
 
 const (
@@ -31,48 +26,53 @@ const (
 	StateOpen
 )
 
+type Device struct {
+	device        *evdev.InputDevice
+	state         DeviceState
+	lastOpenError string
+	eventChan     chan<- Event
+}
+
 func NewKeyboardDevice(device *evdev.InputDevice, eventChan chan<- Event) *Device {
 	k := Device{
-		deviceName: device.Fn,
-		device:     device,
-		state:      StateNotOpen,
-		eventChan:  eventChan,
+		device:    device,
+		state:     StateNotOpen,
+		eventChan: eventChan,
 	}
 	return &k
 }
 
-func (k *Device) GrabDevice() error {
-	err := k.device.Grab()
+func (d *Device) GrabDevice() error {
+	err := d.device.Grab()
 	if err != nil {
-		k.state = StateOpenFailed
+		d.state = StateOpenFailed
 		return err
 	}
+	log.Debugf("Grabbed device: %s", d.device)
 
-	log.Debug(k.device)
-	log.Debugf("Device name: %s", k.device.Fn)
-	log.Debugf("Evdev protocol version: %d", k.device.EvdevVersion)
-	info := fmt.Sprintf("bus 0x%04x, vendor 0x%04x, product 0x%04x, version 0x%04x",
-		k.device.Bustype, k.device.Vendor, k.device.Product, k.device.Version)
-	log.Debugf("Device info: %s", info)
-
-	k.state = StateOpen
-	go k.readKeyboard()
+	d.state = StateOpen
+	go d.readKeyboard()
 	return nil
 }
 
 // readKeyboard reads from the device in an infinite loop.
 // The device has to be opened, and if it disconnects in between this method returns and sets the state to not open.
-func (k *Device) readKeyboard() {
+func (d *Device) readKeyboard() {
 	var events []evdev.InputEvent
 	var err error
 	for {
-		if k.state != StateOpen {
+		if d.state != StateOpen {
 			return
 		}
-		events, err = k.device.Read()
+		events, err = d.device.Read()
 		if err != nil {
-			log.Warnf("Failed to read keyboard: %v", err)
-			k.state = StateNotOpen
+			// don't log a warning if the device path does not exist anymore,
+			// which probably means that the keyboard has been unplugged
+			var pathErr *fs.PathError
+			if !errors.As(err, &pathErr) {
+				log.Warnf("Failed to read keyboard: %T", err)
+			}
+			d.state = StateNotOpen
 			return
 		}
 		for _, event := range events {
@@ -95,28 +95,39 @@ func (k *Device) readKeyboard() {
 						IsPress: event.Value == 1,
 						Time:    time.Now(),
 					}
-					k.eventChan <- e
+					d.eventChan <- e
 				}
 			}
 		}
 	}
 }
 
-// DeviceName returns the name of the keyboard device.
-func (k *Device) DeviceName() string {
-	return k.deviceName
+// String returns a string representation of the device.
+func (d *Device) String() string {
+	return fmt.Sprintf("%s (%s)", d.device.Fn, d.device.Name)
+}
+
+// Path returns the path of the keyboard device.
+func (d *Device) Path() string {
+	return d.device.Fn
+}
+
+// Name returns the name of the keyboard device.
+func (d *Device) Name() string {
+	return d.device.Name
 }
 
 // IsOpen returns true if the device has been opened successfully.
-func (k *Device) IsOpen() bool {
-	return k.state == StateOpen
+func (d *Device) IsOpen() bool {
+	return d.state == StateOpen
 }
 
 // LastOpenError returns the last error on opening the device.
-func (k *Device) LastOpenError() string {
-	return k.lastOpenError
+func (d *Device) LastOpenError() string {
+	return d.lastOpenError
 }
 
-func (k *Device) Device() *evdev.InputDevice {
-	return k.device
+// Disconnected shall be called when a device has been removed.
+func (d *Device) Disconnected() {
+	d.state = StateNotOpen
 }

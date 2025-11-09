@@ -1,10 +1,9 @@
 # mouseless
 
-This program allows you to control the mouse pointer in Linux with the keyboard. It works in all Linux distributions,
-even those running with Wayland.
+This program lets you control the mouse pointer in Linux using the keyboard. It works across all Linux distributions,
+including those running Wayland.
 
-It is the successor of [xmouseless](https://github.com/jbensmann/xmouseless), which depended on X11 and had some
-minor issues.
+It is the successor to [xmouseless](https://github.com/jbensmann/xmouseless).
 
 ## Features
 

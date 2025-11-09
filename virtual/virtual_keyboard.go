@@ -6,28 +6,28 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type VirtualKeyboard struct {
+type Keyboard struct {
 	uinputKeyboard   uinput.Keyboard
 	isPressed        map[uint16]bool
 	pressedModifiers map[uint16]bool
 	triggeredKeys    map[uint16][]uint16
 }
 
-func NewVirtualKeyboard() (*VirtualKeyboard, error) {
+func NewKeyboard() (*Keyboard, error) {
 	var err error
-	v := VirtualKeyboard{
+	v := Keyboard{
 		isPressed:        make(map[uint16]bool),
 		pressedModifiers: make(map[uint16]bool),
 		triggeredKeys:    make(map[uint16][]uint16),
 	}
-	v.uinputKeyboard, err = uinput.CreateKeyboard("/dev/uinput", []byte("mouseless"))
+	v.uinputKeyboard, err = uinput.CreateKeyboard("/dev/uinput", []byte("mouseless keyboard"))
 	if err != nil {
 		return nil, err
 	}
 	return &v, nil
 }
 
-func (v *VirtualKeyboard) PressKeys(triggeredByKey uint16, codes []uint16) {
+func (v *Keyboard) PressKeys(triggeredByKey uint16, codes []uint16) {
 	v.triggeredKeys[triggeredByKey] = append(v.triggeredKeys[triggeredByKey], codes...)
 	// release previous modifiers
 	for c := range v.pressedModifiers {
@@ -47,7 +47,7 @@ func (v *VirtualKeyboard) PressKeys(triggeredByKey uint16, codes []uint16) {
 	}
 }
 
-func (v *VirtualKeyboard) releaseKey(code uint16) {
+func (v *Keyboard) releaseKey(code uint16) {
 	alias, _ := config.GetKeyAlias(code)
 	log.Debugf("Keyboard: releasing %v (%v)", alias, code)
 	err := v.uinputKeyboard.KeyUp(int(code))
@@ -58,7 +58,7 @@ func (v *VirtualKeyboard) releaseKey(code uint16) {
 	delete(v.pressedModifiers, code)
 }
 
-func (v *VirtualKeyboard) OriginalKeyUp(code uint16) {
+func (v *Keyboard) OriginalKeyUp(code uint16) {
 	if codes, ok := v.triggeredKeys[code]; ok {
 		for _, c := range codes {
 			if pressed, ok := v.isPressed[c]; ok && pressed {
@@ -69,6 +69,6 @@ func (v *VirtualKeyboard) OriginalKeyUp(code uint16) {
 	}
 }
 
-func (v *VirtualKeyboard) Close() {
+func (v *Keyboard) Close() {
 	v.uinputKeyboard.Close()
 }

@@ -66,7 +66,7 @@ func NewMouse(conf *config.Config) (*Mouse, error) {
 		mouseMoveEventsChannel: make(chan struct{}, 1),
 	}
 	v.SetConfig(conf)
-	v.uinputMouse, err = uinput.CreateMouse("/dev/uinput", []byte("mouseless"))
+	v.uinputMouse, err = uinput.CreateMouse("/dev/uinput", []byte("mouseless mouse"))
 	if err != nil {
 		return nil, err
 	}

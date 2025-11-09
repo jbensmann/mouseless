@@ -9,8 +9,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
-
-	evdev "github.com/gvalkov/golang-evdev"
 )
 
 type Action string
@@ -454,57 +452,4 @@ func parseKey(key string) (code uint16, err error) {
 	}
 
 	return 0, fmt.Errorf("neither an integer nor a key alias")
-}
-
-// GetDevicePaths returns the list of device paths from the device specifications.
-// If a device spec exists as a file path, it's used directly. Otherwise, it's
-// treated as a device name match.
-func (c *Config) GetDevicePaths() ([]string, error) {
-	var paths []string
-
-	for _, device := range c.Devices {
-		if _, err := os.Stat(device); err == nil {
-			paths = append(paths, device)
-		} else {
-			matchedPaths, err := findDevicesByName(device)
-			if err != nil {
-				return nil, fmt.Errorf("failed to find devices matching '%s': %v", device, err)
-			}
-			paths = append(paths, matchedPaths...)
-		}
-	}
-
-	return paths, nil
-}
-
-// findDevicesByName finds devices by name and returns their paths.
-func findDevicesByName(deviceName string) ([]string, error) {
-	devices, err := evdev.ListInputDevices("/dev/input/event*")
-	if err != nil {
-		return nil, fmt.Errorf("failed to list input devices: %v", err)
-	}
-
-	var matchedPaths []string
-	for _, device := range devices {
-		if strings.EqualFold(device.Name, deviceName) {
-			matchedPaths = append(matchedPaths, device.Fn)
-		}
-	}
-
-	if len(matchedPaths) == 0 {
-		return nil, fmt.Errorf("no devices found with name '%s'", deviceName)
-	}
-
-	if len(matchedPaths) > 1 {
-		// get the device names for the error message
-		var deviceNames []string
-		for _, device := range devices {
-			if strings.EqualFold(device.Name, deviceName) {
-				deviceNames = append(deviceNames, device.Name)
-			}
-		}
-		return nil, fmt.Errorf("multiple devices found with name '%s': %v", deviceName, deviceNames)
-	}
-
-	return matchedPaths, nil
 }

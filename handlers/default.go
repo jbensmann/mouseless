@@ -25,7 +25,7 @@ func (d *DefaultHandler) HandleEvent(eventBinding EventBinding) {
 
 		// switch to first layer on escape, if not mapped to something else
 		baseLayer := d.layerManager.BaseLayer()
-		if binding == nil && event.Code == evdev.KEY_ESC && event.IsPress && currentLayer != baseLayer {
+		if binding == nil && event.Code == evdev.KEY_ESC && currentLayer != baseLayer {
 			binding = config.LayerBinding{Layer: baseLayer.Name}
 		}
 

@@ -6,16 +6,18 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"slices"
+	"sort"
 	"strings"
 	"time"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/jbensmann/mouseless/actions"
 	"github.com/jbensmann/mouseless/config"
 	"github.com/jbensmann/mouseless/handlers"
 	"github.com/jbensmann/mouseless/keyboard"
 	"github.com/jbensmann/mouseless/virtual"
 
+	"github.com/fsnotify/fsnotify"
 	evdev "github.com/gvalkov/golang-evdev"
 	"github.com/jessevdk/go-flags"
 	log "github.com/sirupsen/logrus"
@@ -26,41 +28,43 @@ const (
 )
 
 var (
-	version    string
-	configFile string
+	version string // set during build
+
+	configFile    string
+	configDevices []string
 
 	keyboardDevices []*keyboard.Device
 	virtualMouse    *virtual.Mouse
-	virtualKeyboard *virtual.VirtualKeyboard
+	virtualKeyboard *virtual.Keyboard
 
-	eventInChannel      chan keyboard.Event
-	tapHoldHandler      *handlers.TapHoldHandler
-	comboHandler        *handlers.ComboHandler
+	keyEventChannel     chan keyboard.Event
+	firstEventHandler   handlers.EventHandler
 	reloadConfigChannel chan struct{}
 )
 
 var opts struct {
-	Version     bool   `short:"v" long:"version" description:"Show the version"`
-	Debug       bool   `short:"d" long:"debug" description:"Show verbose debug information"`
-	ConfigFile  string `short:"c" long:"config" description:"The config file"`
-	ListDevices bool   `long:"list-devices" description:"List all found devices with their capabilities"`
+	Version             bool   `short:"v" long:"version" description:"Show the version"`
+	Debug               bool   `short:"d" long:"debug" description:"Show verbose debug information"`
+	ConfigFile          string `short:"c" long:"config" description:"Specify an alternative config file"`
+	ListKeyboardDevices bool   `short:"l" long:"list-devices" description:"List all detected keyboard devices"`
+	ListAllDevices      bool   `short:"L" long:"list-all-devices" description:"List all detected devices"`
 }
 
 func main() {
-	var err error
-
-	_, err = flags.Parse(&opts)
+	_, err := flags.Parse(&opts)
 	if err != nil {
 		os.Exit(1)
 	}
-
 	if opts.Version {
 		fmt.Println(version)
 		os.Exit(0)
 	}
-
-	if opts.ListDevices {
-		listAllDevices()
+	if opts.ListKeyboardDevices {
+		printDevices(true)
+		os.Exit(0)
+	}
+	if opts.ListAllDevices {
+		printDevices(false)
 		os.Exit(0)
 	}
 
@@ -78,73 +82,72 @@ func main() {
 	if configFile == "" {
 		u, err := user.Current()
 		if err != nil {
-			exitError(err, "Failed to get the current user")
+			exitError("Failed to get the current user", err)
 		}
 		configFile = filepath.Join(u.HomeDir, defaultConfigFile)
 	}
-
 	log.Debugf("Using config file: %s", configFile)
 	conf, err := config.ReadConfig(configFile)
 	if err != nil {
-		exitError(err, "Failed to read the config file")
+		exitError("Failed to read the config file", err)
 	}
+	configDevices = conf.Devices
 	run(conf)
 }
 
 func run(conf *config.Config) {
-	eventInChannel = make(chan keyboard.Event, 1000)
+	keyEventChannel = make(chan keyboard.Event, 1000)
 	reloadConfigChannel = make(chan struct{}, 1)
-	var specifiedDevices = conf.Devices
 
-	detectedKeyboardDevices := findKeyboardDevices()
+	allDevices, err := evdev.ListInputDevices("/dev/input/event*")
+	if err != nil {
+		exitError("Failed to detect keyboard devices", err)
+	}
 
 	// check if another instance of mouse is already running
-	for _, device := range detectedKeyboardDevices {
-		if device.Name == "mouseless" {
-			exitError(nil, "Found a keyboard device with name mouseless, "+
-				"which probably means that another instance of mouseless is already running")
+	for _, device := range allDevices {
+		if device.Name == "mouseless keyboard" {
+			exitError(
+				"Found a keyboard device with name 'mouseless keyboard'"+
+					", which probably means that another instance of mouseless is already running",
+				nil,
+			)
 		}
 	}
 
-	// if no devices are specified, use the detected ones
-	if len(conf.Devices) == 0 {
-		for _, device := range detectedKeyboardDevices {
-			conf.Devices = append(conf.Devices, device.Fn)
-		}
-		if len(conf.Devices) == 0 {
-			exitError(nil, "No keyboard devices found")
+	var usedDevices []*evdev.InputDevice
+	for _, device := range allDevices {
+		if shallDeviceBeUsed(device) {
+			usedDevices = append(usedDevices, device)
 		}
 	}
-
-	// resolve device specifications to paths
-	devicePaths, err := conf.GetDevicePaths()
-	if err != nil {
-		exitError(err, "Failed to resolve device specifications")
+	if len(usedDevices) == 0 {
+		log.Warnf("No keyboard devices found")
 	}
 
 	// init virtual mouse and keyboard
 	virtualMouse, err = virtual.NewMouse(conf)
 	if err != nil {
-		exitError(err, "Failed to init the virtual mouse")
+		exitError("Failed to init the virtual mouse", err)
 	}
 	defer virtualMouse.Close()
 
-	virtualKeyboard, err = virtual.NewVirtualKeyboard()
+	virtualKeyboard, err = virtual.NewKeyboard()
 	if err != nil {
-		exitError(err, "Failed to init the virtual keyboard")
+		exitError("Failed to init the virtual keyboard", err)
 	}
 	defer virtualKeyboard.Close()
 
-	// init keyboard devices
-	for _, dev := range conf.Devices {
-		for _, device := range detectedKeyboardDevices {
-			if dev == device.Fn {
-				kd := keyboard.NewKeyboardDevice(device, eventInChannel)
-				keyboardDevices = append(keyboardDevices, kd)
-				kd.GrabDevice()
-			}
-		}
+	for _, device := range usedDevices {
+		log.Infof("Found keyboard device: %s (%s)", device.Fn, device.Name)
+		log.Debugf("Device details: %s", device)
+	}
+	log.Infof("mouseless is starting now, release all keys...")
+	time.Sleep(500 * time.Millisecond)
 
+	// init keyboard devices
+	for _, device := range usedDevices {
+		addDevice(device)
 	}
 
 	initHandlers(conf)
@@ -154,86 +157,252 @@ func run(conf *config.Config) {
 		cmd := exec.Command("sh", "-c", conf.StartCommand)
 		err := cmd.Run()
 		if err != nil {
-			exitError(err, "Execution of start command failed")
+			exitError("Execution of start command failed", err)
 		}
 	}
 
-	go watchForKeyboardDevices(specifiedDevices)
+	err = watchForKeyboardDevices()
+	if err != nil {
+		exitError("Failed to watch for keyboard devices", err)
+	}
 
 	virtualMouse.StartLoop()
 	mainLoop()
 }
 
 func initHandlers(conf *config.Config) {
-	executor := actions.NewBindingExecutor(conf, virtualKeyboard, virtualMouse, reloadConfigChannel)
+	executor := actions.NewExecutor(conf, virtualKeyboard, virtualMouse, reloadConfigChannel)
 
 	defaultHandler := handlers.NewDefaultHandler()
 	defaultHandler.SetLayerManager(executor)
 	defaultHandler.SetNextHandler(executor)
 
-	tapHoldHandler = handlers.NewTapHoldHandler(int64(conf.QuickTapTime))
+	tapHoldHandler := handlers.NewTapHoldHandler(int64(conf.QuickTapTime))
 	tapHoldHandler.SetLayerManager(executor)
 	tapHoldHandler.SetNextHandler(defaultHandler)
 
-	comboHandler = handlers.NewComboHandler(int64(conf.ComboTime))
-	comboHandler.SetLayerManager(executor)
-	comboHandler.SetNextHandler(tapHoldHandler)
+	firstEventHandler = handlers.NewComboHandler(int64(conf.ComboTime))
+	firstEventHandler.SetLayerManager(executor)
+	firstEventHandler.SetNextHandler(tapHoldHandler)
 }
 
+// mainLoop processes incoming keyboard events and reload config events.
 func mainLoop() {
-	checkTimer := time.NewTimer(5 * time.Second)
-
-	// listen for incoming keyboard events
 	for {
 		select {
 		case <-reloadConfigChannel:
 			reloadConfig()
-		case e := <-eventInChannel:
-			comboHandler.HandleEvent(handlers.EventBinding{Event: e})
-		case <-checkTimer.C:
-		}
-
-		// check if at least one device is opened
-		oneDeviceOpen := false
-		for _, device := range keyboardDevices {
-			if device.IsOpen() {
-				oneDeviceOpen = true
-			}
-		}
-		if !oneDeviceOpen {
-			log.Warnf("No keyboard device could be opened:")
-			for i, device := range keyboardDevices {
-				log.Warnf("Device %d: %s: %s", i+1, device.DeviceName(), device.LastOpenError())
-			}
-			time.Sleep(10 * time.Second)
+		case e := <-keyEventChannel:
+			firstEventHandler.HandleEvent(handlers.EventBinding{Event: e})
 		}
 	}
 }
 
-// findKeyboardDevices finds all available keyboard input devices.
-func findKeyboardDevices() []*evdev.InputDevice {
-	devices, _ := evdev.ListInputDevices("/dev/input/event*")
-
-	var keyboardDevices []*evdev.InputDevice
-	log.Debugf("Auto detected keyboard devices:")
-	for _, dev := range devices {
-		if isKeyboardDevice(dev) {
-			keyboardDevices = append(keyboardDevices, dev)
-			log.Debugf("- %s: %s\n", dev.Fn, dev.Name)
-		}
+// watchForKeyboardDevices starts a watcher for devices in /dev/input, and adds or removes keyboard
+// devices matching the device specification in the config file.
+func watchForKeyboardDevices() error {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return err
 	}
-	return keyboardDevices
+
+	watchPath := "/dev/input"
+	log.Debugf("Watching for keyboard devices in: %s", watchPath)
+	err = watcher.Add(watchPath)
+	if err != nil {
+		_ = watcher.Close()
+		return fmt.Errorf("failed to add watcher for %s: %w", watchPath, err)
+	}
+
+	go func() {
+		defer watcher.Close()
+
+		for {
+			select {
+			case e, ok := <-watcher.Events:
+				if !ok {
+					log.Errorf("Device watcher closed unexpectetly")
+					return
+				}
+				log.Debugf("Detected a device event: %s", e)
+				if strings.HasPrefix(e.Name, "/dev/input/event") {
+					if e.Op.Has(fsnotify.Create) {
+						deviceCreated(e)
+					} else if e.Op.Has(fsnotify.Remove) {
+						deviceRemoved(e)
+					}
+				}
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					log.Errorf("Device watcher closed unexpectetly")
+					return
+				}
+				log.Warnf("Device watcher error: %v", err)
+			}
+		}
+	}()
+	return nil
 }
 
-// listAllDevices prints all input devices with their capabilities.
-func listAllDevices() {
-	devices, _ := evdev.ListInputDevices("/dev/input/event*")
-
-	for _, dev := range devices {
-		if isKeyboardDevice(dev) {
-			keyboardDevices = append(keyboardDevices, dev)
+// deviceCreated is called when a new device file is created.
+func deviceCreated(e fsnotify.Event) {
+	for _, dev := range keyboardDevices {
+		if dev.Path() == e.Name {
+			log.Infof("Device already conntected: %s", dev.Path())
+			return
 		}
 	}
+	var device *evdev.InputDevice
+	var err error
+	// wait for udev to fix permissions, otherwise one can get permission denied on open
+	for range 3 {
+		device, err = evdev.Open(e.Name)
+		if err == nil {
+			break
+		}
+		time.Sleep(1000 * time.Millisecond)
+	}
+	if err != nil {
+		log.Warnf("Failed to open device %s: %v", e.Name, err)
+		return
+	}
+	if !shallDeviceBeUsed(device) {
+		log.Debugf("Ignoring the device")
+	} else {
+		log.Infof("Detected new keyboard device: %s (%s)", device.Fn, device.Name)
+		addDevice(device)
+	}
+}
+
+// deviceRemoved is called when a device file is removed.
+func deviceRemoved(e fsnotify.Event) {
+	for i, dev := range keyboardDevices {
+		if dev.Path() == e.Name {
+			log.Infof("Keybord device has been removed: %s", dev)
+			keyboardDevices = slices.Delete(keyboardDevices, i, i+1)
+			dev.Disconnected()
+			if len(keyboardDevices) == 0 {
+				log.Warnf("No more keyboard devices connected to read from")
+			}
+			break
+		}
+	}
+}
+
+// addDevice adds the given keyboard device to the list of keyboard devices to read from.
+func addDevice(device *evdev.InputDevice) {
+	log.Infof("Reading from keyboard device: %s", device.Fn)
+	kd := keyboard.NewKeyboardDevice(device, keyEventChannel)
+	err := kd.GrabDevice()
+	if err != nil {
+		log.Warnf("Failed to grab keyboard device %s: %v", device.Fn, err)
+		return
+	}
+	keyboardDevices = append(keyboardDevices, kd)
+}
+
+// reloadConfig reloads the config file and updates the handlers, but does not
+// update the keyboard devices specification.
+func reloadConfig() {
+	log.Infof("Reloading the config file: %s", configFile)
+	var err error
+	conf, err := config.ReadConfig(configFile)
+	if err != nil {
+		log.Warnf("Failed to read the config file: %v", err)
+		return
+	}
+	initHandlers(conf)
+	virtualMouse.SetConfig(conf)
+}
+
+// printDevices prints all input devices with their capabilities.
+func printDevices(keyboardsOnly bool) {
+	devices, err := evdev.ListInputDevices("/dev/input/event*")
+	if err != nil {
+		exitError("Failed to list input devices", err)
+	}
+	headers := []string{"Name", "Device", "Keyboard", "Bus", "Vendor", "Product", "Version", "Events"}
+	rows := [][]string{}
+	for _, dev := range devices {
+		isKeyboard := isKeyboardDevice(dev)
+		if !keyboardsOnly || isKeyboard {
+			keyboardText := "no"
+			if isKeyboard {
+				keyboardText = "yes"
+			}
+			var capabilities []string
+			for capType := range dev.Capabilities {
+				capabilities = append(capabilities, capType.Name)
+			}
+			sort.Strings(capabilities)
+			rows = append(rows, []string{
+				dev.Name,
+				dev.Fn,
+				keyboardText,
+				fmt.Sprintf("%#04x", dev.Bustype),
+				fmt.Sprintf("%#04x", dev.Vendor),
+				fmt.Sprintf("%#04x", dev.Product),
+				fmt.Sprintf("%#04x", dev.Version),
+				strings.Join(capabilities, ","),
+			})
+		}
+	}
+	// sort by name
+	sort.Slice(rows, func(i, j int) bool {
+		return rows[i][0] < rows[j][0]
+	})
+	printTable(headers, rows)
+}
+
+// printTable prints a table with the given headers and rows.
+// It dynamically calculates the width of each column.
+func printTable(headers []string, rows [][]string) {
+	widths := make([]int, len(headers))
+	for i, header := range headers {
+		widths[i] = len(header)
+	}
+	for _, row := range rows {
+		for i, col := range row {
+			if len(col) > widths[i] {
+				widths[i] = len(col)
+			}
+		}
+	}
+	printRow := func(row []string) {
+		for i, col := range row {
+			fmt.Print(col)
+			if i < len(row)-1 {
+				fmt.Print(strings.Repeat(" ", 2+widths[i]-len(col)))
+			}
+		}
+		fmt.Println()
+	}
+	printRow(headers)
+	for _, row := range rows {
+		printRow(row)
+	}
+}
+
+// shallDeviceBeUsed checks if the given device should be used.
+// If devices are specified in the config file, it checks if the device is specified by name or path.
+// Otherwise, it just checks if the device is a keyboard.
+func shallDeviceBeUsed(device *evdev.InputDevice) bool {
+	if len(configDevices) == 0 {
+		return isKeyboardDevice(device)
+	}
+	for _, deviceConfig := range configDevices {
+		if deviceConfig == device.Fn || deviceConfig == device.Name {
+			return true
+		}
+		// if it is a symlink, resolve it and check if the resolved path matches
+		dest, err := filepath.EvalSymlinks(deviceConfig)
+		if err == nil {
+			if dest == device.Fn {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // isKeyboardDevice checks if the given device is a keyboard by checking if
@@ -251,20 +420,8 @@ func isKeyboardDevice(dev *evdev.InputDevice) bool {
 	return false
 }
 
-// reloadConfig reloads the config file and updates the handlers.
-// But it does not reload the keyboard devices to read from.
-func reloadConfig() {
-	log.Infof("Reloading the config file: %s", configFile)
-	conf, err := config.ReadConfig(configFile)
-	if err != nil {
-		log.Warnf("Failed to read the config file: %v", err)
-		return
-	}
-	initHandlers(conf)
-	virtualMouse.SetConfig(conf)
-}
-
-func exitError(err error, msg string) {
+// exitError logs the given error and exits the program.
+func exitError(msg string, err error) {
 	if err != nil {
 		log.Errorf(msg+": %v", err)
 	} else {
@@ -272,97 +429,4 @@ func exitError(err error, msg string) {
 	}
 	log.Error("Exiting")
 	os.Exit(1)
-}
-
-func watchForKeyboardDevices(specifiedDevices []string) error {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return err
-	}
-	defer watcher.Close()
-
-	err = watcher.Add("/dev/input")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for {
-		select {
-		case e, ok := <-watcher.Events:
-			if !ok {
-				return nil
-			}
-
-			if e.Op&fsnotify.Create != fsnotify.Create {
-				continue
-			}
-
-			if len(specifiedDevices) > 0 {
-				matched := false
-				for _, device := range specifiedDevices {
-					if e.Name == device {
-						matched = true
-						break
-					}
-				}
-				if !matched {
-					continue
-				}
-			} else if !strings.HasPrefix(e.Name, "/dev/input/event") {
-				continue
-			}
-
-			log.Infof("New device detected: %s", e.Name)
-
-			// Check if the device is already in the list if so
-			// remove it, because you one can't be sure it's the
-			// same device anyway.
-			for i, dev := range keyboardDevices {
-				if dev.DeviceName() == e.Name {
-					log.Debugf("Remove old device %v", dev.DeviceName())
-					keyboardDevices = append(keyboardDevices[:i], keyboardDevices[i+1:]...)
-					break
-				}
-			}
-
-			// wait for udev to fix permissions
-			// otherwise you can get permission denied on Open()
-			time.Sleep(1 * time.Second)
-
-			var device *evdev.InputDevice
-			device, err = evdev.Open(e.Name)
-			if err != nil {
-				log.Warnf("Failed to open device %s: %v", e.Name, err)
-				continue
-			}
-
-			if !isKeyboardDevice(device) {
-				log.Debugf("New device was not a keyboard")
-				continue
-			}
-
-			log.Infof("Adding new device: %s", e.Name)
-			kd := keyboard.NewKeyboardDevice(device, eventInChannel)
-			keyboardDevices = append(keyboardDevices, kd)
-			kd.GrabDevice()
-		case err, ok := <-watcher.Errors:
-			if !ok {
-				return nil
-			}
-			log.Println("Watcher error:", err)
-		}
-	}
-}
-
-func isKeyboardDevice(dev *evdev.InputDevice) bool {
-	for capType, codes := range dev.Capabilities {
-		if capType.Type == evdev.EV_KEY {
-			for _, code := range codes {
-				if code.Code == evdev.KEY_A || code.Code == evdev.KEY_KP1 {
-					return true
-				}
-			}
-		}
-	}
-	return false
 }
