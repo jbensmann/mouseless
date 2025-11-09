@@ -163,7 +163,7 @@ func ReadConfig(fileName string) (*Config, error) {
 // ParseConfig parses the given configuration.
 func ParseConfig(configBytes []byte) (*Config, error) {
 	var rawConfig RawConfig
-	err := yaml.Unmarshal(configBytes, &rawConfig)
+	err := yaml.UnmarshalStrict(configBytes, &rawConfig)
 	if err != nil {
 		return nil, err
 	}
