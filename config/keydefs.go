@@ -1,5 +1,9 @@
 package config
 
+import (
+	"slices"
+)
+
 const WildcardKey = 10000
 
 var keyAliases = map[string]uint16{
@@ -230,6 +234,18 @@ var keyAliases = map[string]uint16{
 }
 var keyAliasesReversed = make(map[uint16]string)
 
+var modifierKeys = []string{
+	"leftshift",
+	"rightshift",
+	"leftctrl",
+	"rightctrl",
+	"leftalt",
+	"rightalt",
+	"leftmeta",
+	"rightmeta",
+}
+var modifiersKeyCodes []uint16
+
 type MouseButton string
 
 const (
@@ -243,6 +259,13 @@ func init() {
 	for alias, code := range keyAliases {
 		keyAliasesReversed[code] = alias
 	}
+	for _, modifier := range modifierKeys {
+		code, exists := keyAliases[modifier]
+		if !exists {
+			panic("unknown modifier")
+		}
+		modifiersKeyCodes = append(modifiersKeyCodes, code)
+	}
 }
 
 func GetKeyCode(alias string) (code uint16, exists bool) {
@@ -253,4 +276,8 @@ func GetKeyCode(alias string) (code uint16, exists bool) {
 func GetKeyAlias(code uint16) (alias string, exists bool) {
 	alias, exists = keyAliasesReversed[code]
 	return alias, exists
+}
+
+func IsModifierKey(code uint16) bool {
+	return slices.Contains(modifiersKeyCodes, code)
 }
