@@ -144,8 +144,6 @@ func run(conf *config.Config) {
 		log.Infof("Found keyboard device: %s (%s)", device.Fn, device.Name)
 		log.Debugf("Device details: %s", device)
 	}
-	log.Infof("mouseless is starting now, release all keys...")
-	time.Sleep(500 * time.Millisecond)
 
 	// init keyboard devices
 	for _, device := range usedDevices {
