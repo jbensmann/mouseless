@@ -199,6 +199,9 @@ func ParseConfig(configBytes []byte) (*Config, error) {
 	} else {
 		config.ComboTime = 25
 	}
+	if len(rawConfig.Layers) == 0 {
+		return nil, fmt.Errorf("no layers defined")
+	}
 	for i, l := range rawConfig.Layers {
 		layer, err := parseLayer(l)
 		if err != nil {
