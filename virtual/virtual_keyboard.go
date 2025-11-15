@@ -27,6 +27,7 @@ func NewKeyboard() (*Keyboard, error) {
 	return &v, nil
 }
 
+// PressKeys presses the given keys and releases them automatically when the given trigger key is released.
 func (v *Keyboard) PressKeys(triggeredByKey uint16, codes []uint16) {
 	v.triggeredKeys[triggeredByKey] = append(v.triggeredKeys[triggeredByKey], codes...)
 	// release previous modifiers
@@ -34,17 +35,31 @@ func (v *Keyboard) PressKeys(triggeredByKey uint16, codes []uint16) {
 		v.releaseKey(c)
 	}
 	for i, c := range codes {
-		alias, _ := config.GetKeyAlias(c)
-		log.Debugf("Keyboard: pressing %v (%v)", alias, c)
-		err := v.uinputKeyboard.KeyDown(int(c))
-		if err != nil {
-			log.Warnf("Keyboard: failed to press the key %v: %v", c, err)
-		}
-		v.isPressed[c] = true
+		v.pressKey(c)
 		if i < len(codes)-1 {
 			v.pressedModifiers[c] = true
 		}
 	}
+}
+
+// PressKeyManually can be used to press a key without automatic release, which must be done by calling ReleaseKeyManually.
+func (v *Keyboard) PressKeyManually(code uint16) {
+	v.pressKey(code)
+}
+
+// ReleaseKeyManually must be called eventually to release a key that was pressed via PressKeyManually.
+func (v *Keyboard) ReleaseKeyManually(code uint16) {
+	v.releaseKey(code)
+}
+
+func (v *Keyboard) pressKey(code uint16) {
+	alias, _ := config.GetKeyAlias(code)
+	log.Debugf("Keyboard: pressing %v (%v)", alias, code)
+	err := v.uinputKeyboard.KeyDown(int(code))
+	if err != nil {
+		log.Warnf("Keyboard: failed to press the key %v: %v", code, err)
+	}
+	v.isPressed[code] = true
 }
 
 func (v *Keyboard) releaseKey(code uint16) {

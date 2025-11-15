@@ -54,11 +54,12 @@ func (b *Executor) SetLayerManager(_ handlers.LayerManager) {
 }
 
 func (b *Executor) HandleEvent(eventBinding handlers.EventBinding) {
-	if eventBinding.Binding != nil {
-		b.ExecuteBinding(eventBinding.Binding, eventBinding.Event.Code)
-	}
+	// todo: check if reversing the order has side effects
 	if !eventBinding.Event.IsPress {
 		b.KeyReleased(eventBinding.Event.Code)
+	}
+	if eventBinding.Binding != nil {
+		b.ExecuteBinding(eventBinding.Binding, eventBinding.Event.Code)
 	}
 }
 
@@ -88,6 +89,10 @@ func (b *Executor) ExecuteBinding(binding config.Binding, causeCode uint16) {
 			}
 		}
 		b.virtualKeyboard.PressKeys(causeCode, keys)
+	case config.KeyPressBinding:
+		b.virtualKeyboard.PressKeyManually(t.Key)
+	case config.KeyReleaseBinding:
+		b.virtualKeyboard.ReleaseKeyManually(t.Key)
 	case config.LayerBinding:
 		// deactivate any toggled layers
 		if b.toggleLayerPrevious != nil {
@@ -140,6 +145,15 @@ func (b *Executor) CurrentLayer() *config.Layer {
 
 func (b *Executor) BaseLayer() *config.Layer {
 	return b.config.Layers[0]
+}
+
+func (b *Executor) GetLayer(name string) (*config.Layer, bool) {
+	for _, layer := range b.config.Layers {
+		if layer.Name == name {
+			return layer, true
+		}
+	}
+	return nil, false
 }
 
 func (b *Executor) KeyReleased(code uint16) {

@@ -51,6 +51,8 @@ layers:
     capslock: esc
     # key combos are activated when both keys are pressed simultaneously
     f+d: layer mouse
+    # map ctrl+h/j/k/l to arrow keys
+    leftctrl: mod-layer leftctrl vim-arrows
 # a layer for mouse movement
 - name: mouse
   # when true, keys that are not mapped keep their original meaning
@@ -92,3 +94,9 @@ layers:
     v: enter
     # _ is the wildcard key, which matches any key that is not mapped
     _: rightalt+_
+- name: vim-arrows
+  bindings:
+    h: left
+    j: down
+    k: up
+    l: right

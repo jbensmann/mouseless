@@ -17,6 +17,7 @@ const (
 	ActionTapHold            Action = "tap-hold"
 	ActionTapHoldNext        Action = "tap-hold-next"
 	ActionTapHoldNextRelease Action = "tap-hold-next-release"
+	ActionModLayer           Action = "mod-layer"
 	ActionMulti              Action = "multi"
 	ActionLayer              Action = "layer"
 	ActionToggleLayer        Action = "toggle-layer"
@@ -106,6 +107,12 @@ type TapHoldBinding struct {
 	TapOnNextRelease bool
 }
 
+type ModLayerBinding struct {
+	BaseBinding
+	ModKey uint16
+	Layer  string
+}
+
 type LayerBinding struct {
 	BaseBinding
 	Layer string
@@ -143,6 +150,16 @@ type ButtonBinding struct {
 type ExecBinding struct {
 	BaseBinding
 	Command string
+}
+
+// these are only used internally
+type KeyPressBinding struct {
+	BaseBinding
+	Key uint16
+}
+type KeyReleaseBinding struct {
+	BaseBinding
+	Key uint16
 }
 
 // ReadConfig reads and parses the configuration from the given file.
@@ -324,6 +341,15 @@ func parseBinding(rawBinding string) (binding Binding, err error) {
 		}
 		tapHoldBinding.TapOnNextRelease = true
 		binding = tapHoldBinding
+	case string(ActionModLayer):
+		if len(args) != 2 {
+			return nil, fmt.Errorf("action requires exactly two arguments")
+		}
+		key, err := parseKey(args[0])
+		if err != nil {
+			return nil, err
+		}
+		binding = ModLayerBinding{ModKey: key, Layer: args[1]}
 	case string(ActionLayer):
 		if len(args) != 1 {
 			return nil, fmt.Errorf("action requires exactly one argument")

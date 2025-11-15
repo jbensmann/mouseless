@@ -114,17 +114,18 @@ layout.
 Aside from remapping keys, there are a bunch of other actions available, e.g. `rightalt: toggle-layer arrows`, which
 jumps to the arrows layer when rightalt is pressed and jumps back on release. These are all available actions:
 
-| action                 | examples                                  | meaning                                                                   |
-|------------------------|-------------------------------------------|---------------------------------------------------------------------------|
-| `<key-combo>`          | `a`, `comma`, `shift+a`                   | maps to the key (combo)                                                   |
-| `layer <layer>`        | `layer mouse`                             | switches to the layer with the given name                                 |
-| `toggle-layer <layer>` | `toggle-layer mouse`                      | switches to the layer with the given name while the mapped key is pressed |
-| `move <x> <y>`         | `move 1 0`                                | moves the pointer into the given direction                                |
-| `scroll <direction>`   | `scroll up`                               | scrolls (up, down, left or right)                                         |
-| `speed <multiplier>`   | `speed 2.5`                               | multiplies the pointer and scroll speeds with the given value             |
-| `button <button>`      | `button left`                             | presses a mouse button (left, right or middle)                            |
-| `exec <cmd>`           | `exec notify-send "hello from mouseless"` | executes the given command (the example sends a desktop notification)     |
-| `reload-config`        | `reload-config`                           | reloads the configuration file, except the keyboard devices               |
+| action                    | examples                                  | meaning                                                                                             |
+| ------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `<key-combo>`             | `a`, `comma`, `shift+a`                   | maps to the key (combo)                                                                             |
+| `layer <layer>`           | `layer mouse`                             | switches to the layer with name `mouse`                                                             |
+| `toggle-layer <layer>`    | `toggle-layer mouse`                      | switches to the layer with name `mouse` while the mapped key is pressed                             |
+| `mod-layer <key> <layer>` | `mod-layer leftctrl mouse`                | switches to the layer with name `mouse` for bound keys only, otherwise presses the left control key |
+| `move <x> <y>`            | `move 1 0`                                | moves the pointer in the given direction                                                            |
+| `scroll <direction>`      | `scroll up`                               | scrolls up, down, left or right                                                                     |
+| `speed <multiplier>`      | `speed 2.5`                               | multiplies the pointer and scroll speeds with the given value                                       |
+| `button <button>`         | `button left`                             | presses a mouse button (left, right or middle)                                                      |
+| `exec <cmd>`              | `exec notify-send "hello from mouseless"` | executes the given command (the example sends a desktop notification)                               |
+| `reload-config`           | `reload-config`                           | reloads the configuration file                                                                      |
 
 With these actions one could e.g. toggle the mouse layer with `tab: toggle-layer mouse`, so that all bindings from the
 mouse layer are available while `tab` is held down. However, this sacrifices the `tab` key which might not be desirable.

@@ -173,17 +173,22 @@ func run(conf *config.Config) {
 func initHandlers(conf *config.Config) {
 	executor := actions.NewExecutor(conf, virtualKeyboard, virtualMouse, reloadConfigChannel)
 
-	defaultHandler := handlers.NewDefaultHandler()
-	defaultHandler.SetLayerManager(executor)
-	defaultHandler.SetNextHandler(executor)
+	h := []handlers.EventHandler{
+		handlers.NewComboHandler(int64(conf.ComboTime)),
+		handlers.NewModLayerHandler(),
+		handlers.NewTapHoldHandler(int64(conf.QuickTapTime)),
+		handlers.NewDefaultHandler(),
+	}
 
-	tapHoldHandler := handlers.NewTapHoldHandler(int64(conf.QuickTapTime))
-	tapHoldHandler.SetLayerManager(executor)
-	tapHoldHandler.SetNextHandler(defaultHandler)
-
-	firstEventHandler = handlers.NewComboHandler(int64(conf.ComboTime))
-	firstEventHandler.SetLayerManager(executor)
-	firstEventHandler.SetNextHandler(tapHoldHandler)
+	firstEventHandler = h[0]
+	for i, handler := range h {
+		handler.SetLayerManager(executor)
+		if i < len(h)-1 {
+			handler.SetNextHandler(h[i+1])
+		} else {
+			handler.SetNextHandler(executor)
+		}
+	}
 }
 
 // mainLoop processes incoming keyboard events and reload config events.
