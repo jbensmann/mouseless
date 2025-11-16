@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -182,9 +183,17 @@ func ReadConfig(fileName string) (*Config, error) {
 // ParseConfig parses the given configuration.
 func ParseConfig(configBytes []byte) (*Config, error) {
 	var rawConfig RawConfig
-	err := yaml.UnmarshalStrict(configBytes, &rawConfig)
+	err := yaml.Unmarshal(configBytes, &rawConfig)
 	if err != nil {
 		return nil, err
+	}
+	// log a warning for unknown or duplicate keys
+	err = yaml.UnmarshalStrict(configBytes, &rawConfig)
+	var typeError *yaml.TypeError
+	if errors.As(err, &typeError) {
+		for _, e := range typeError.Errors {
+			log.Warnf("problem in the config file: %v", e)
+		}
 	}
 
 	config := Config{
