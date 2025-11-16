@@ -46,6 +46,7 @@ type RawConfig struct {
 	BaseScrollSpeed        float64    `yaml:"baseScrollSpeed"`
 	QuickTapTime           float64    `yaml:"quickTapTime"`
 	ComboTime              float64    `yaml:"comboTime"`
+	InstanceName           string     `yaml:"instanceName"`
 	Layers                 []RawLayer `yaml:"layers"`
 }
 
@@ -72,6 +73,7 @@ type Config struct {
 	MouseDecelerationTime  float64
 	StartMouseSpeed        float64
 	BaseScrollSpeed        float64
+	InstanceName           string
 	Layers                 []*Layer
 }
 
@@ -219,6 +221,7 @@ func ParseConfig(configBytes []byte) (*Config, error) {
 	config.MouseDecelerationTime = rawConfig.MouseDecelerationTime
 	config.StartMouseSpeed = rawConfig.StartMouseSpeed
 	config.BaseScrollSpeed = rawConfig.BaseScrollSpeed
+	config.InstanceName = rawConfig.InstanceName
 	config.QuickTapTime = rawConfig.QuickTapTime
 	if rawConfig.ComboTime > 0 {
 		config.ComboTime = rawConfig.ComboTime

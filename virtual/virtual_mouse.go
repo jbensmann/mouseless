@@ -51,7 +51,7 @@ type Mouse struct {
 	mouseMoveEventsChannel chan struct{}
 }
 
-func NewMouse(conf *config.Config) (*Mouse, error) {
+func NewMouse(conf *config.Config, deviceName string) (*Mouse, error) {
 	var err error
 	v := Mouse{
 		isButtonPressed:        make(map[config.MouseButton]bool),
@@ -66,7 +66,7 @@ func NewMouse(conf *config.Config) (*Mouse, error) {
 		mouseMoveEventsChannel: make(chan struct{}, 1),
 	}
 	v.SetConfig(conf)
-	v.uinputMouse, err = uinput.CreateMouse("/dev/uinput", []byte("mouseless mouse"))
+	v.uinputMouse, err = uinput.CreateMouse("/dev/uinput", []byte(deviceName))
 	if err != nil {
 		return nil, err
 	}

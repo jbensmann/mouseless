@@ -13,14 +13,14 @@ type Keyboard struct {
 	triggeredKeys    map[uint16][]uint16
 }
 
-func NewKeyboard() (*Keyboard, error) {
+func NewKeyboard(devicesName string) (*Keyboard, error) {
 	var err error
 	v := Keyboard{
 		isPressed:        make(map[uint16]bool),
 		pressedModifiers: make(map[uint16]bool),
 		triggeredKeys:    make(map[uint16][]uint16),
 	}
-	v.uinputKeyboard, err = uinput.CreateKeyboard("/dev/uinput", []byte("mouseless keyboard"))
+	v.uinputKeyboard, err = uinput.CreateKeyboard("/dev/uinput", []byte(devicesName))
 	if err != nil {
 		return nil, err
 	}

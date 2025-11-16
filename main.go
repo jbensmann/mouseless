@@ -106,14 +106,23 @@ func run(conf *config.Config) {
 		exitError("Failed to detect keyboard devices", err)
 	}
 
+	instanceName := "mouseless"
+	if conf.InstanceName != "" {
+		instanceName = conf.InstanceName
+	}
+	mouseName := instanceName + " mouse"
+	keyboardName := instanceName + " keyboard"
+
 	// check if another instance of mouse is already running
 	for _, device := range allDevices {
-		if device.Name == "mouseless keyboard" {
-			exitError(
-				"Found a keyboard device with name 'mouseless keyboard'"+
-					", which probably means that another instance of mouseless is already running",
-				nil,
+		if device.Name == keyboardName {
+			msg := fmt.Sprintf(
+				"Found a keyboard device with name '%s'"+
+					", which probably means that another instance of mouseless is already running"+
+					" (if you want to run multiple instances, change the instanceName in the config)",
+				keyboardName,
 			)
+			exitError(msg, nil)
 		}
 	}
 
@@ -128,13 +137,13 @@ func run(conf *config.Config) {
 	}
 
 	// init virtual mouse and keyboard
-	virtualMouse, err = virtual.NewMouse(conf)
+	virtualMouse, err = virtual.NewMouse(conf, mouseName)
 	if err != nil {
 		exitError("Failed to init the virtual mouse", err)
 	}
 	defer virtualMouse.Close()
 
-	virtualKeyboard, err = virtual.NewKeyboard()
+	virtualKeyboard, err = virtual.NewKeyboard(keyboardName)
 	if err != nil {
 		exitError("Failed to init the virtual keyboard", err)
 	}

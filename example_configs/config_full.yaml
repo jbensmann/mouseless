@@ -10,6 +10,9 @@ devicesExclude:
 # - "Name of keyboard"
 # - "/dev/input/by-id/usb-1234_5678-event-kbd"
 
+# in case one wants to run multiple instances of mouseless, they must have different instanceNames
+# instanceName: "mouseless"
+
 # this is executed when mouseless starts, e.g. useful for setting the keyboard layout
 # startCommand: "setxkbmap de"
 
