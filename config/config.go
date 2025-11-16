@@ -28,6 +28,7 @@ const (
 	ActionSpeed              Action = "speed"
 	ActionButton             Action = "button"
 	ActionExec               Action = "exec"
+	ActionExecPressRelease   Action = "exec-press-release"
 	ActionNop                Action = "nop"
 )
 
@@ -153,6 +154,11 @@ type ButtonBinding struct {
 type ExecBinding struct {
 	BaseBinding
 	Command string
+}
+type ExecPressReleaseBinding struct {
+	BaseBinding
+	PressCommand   string
+	ReleaseCommand string
 }
 
 // these are only used internally
@@ -430,6 +436,15 @@ func parseBinding(rawBinding string) (binding Binding, err error) {
 			return nil, fmt.Errorf("action requires at least one argument")
 		}
 		binding = ExecBinding{Command: argString}
+	case string(ActionExecPressRelease):
+		commands := strings.Split(argString, ";")
+		if len(commands) != 2 {
+			return nil, fmt.Errorf("exec-press-release requires exactly two commands (separated by ;)")
+		}
+		binding = ExecPressReleaseBinding{
+			PressCommand:   commands[0],
+			ReleaseCommand: commands[1],
+		}
 	case string(ActionNop):
 		if len(args) != 0 {
 			return nil, fmt.Errorf("action does not take any argument")

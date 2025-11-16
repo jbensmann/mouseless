@@ -2,7 +2,6 @@ package actions
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -29,20 +28,23 @@ type Executor struct {
 	// remember all keys that toggled a layer, and from which layer they came from
 	toggleLayerKeys     []uint16
 	toggleLayerPrevious []*config.Layer
+	// remember all ExecPressReleaseBindings that have been executed
+	execPressReleaseBindings map[uint16]config.ExecPressReleaseBinding
 }
 
 func NewExecutor(
-	config *config.Config,
+	conf *config.Config,
 	virtualKeyboard *virtual.Keyboard,
 	virtualMouse *virtual.Mouse,
 	reloadConfigChannel chan struct{},
 ) *Executor {
 	b := Executor{
-		config:              config,
-		virtualKeyboard:     virtualKeyboard,
-		virtualMouse:        virtualMouse,
-		reloadConfigChannel: reloadConfigChannel,
-		currentLayer:        config.Layers[0],
+		config:                   conf,
+		virtualKeyboard:          virtualKeyboard,
+		virtualMouse:             virtualMouse,
+		reloadConfigChannel:      reloadConfigChannel,
+		currentLayer:             conf.Layers[0],
+		execPressReleaseBindings: make(map[uint16]config.ExecPressReleaseBinding),
 	}
 	return &b
 }
@@ -121,21 +123,11 @@ func (b *Executor) ExecuteBinding(binding config.Binding, causeCode uint16) {
 		}
 	case config.ExecBinding:
 		log.Debugf("Executing: %s", t.Command)
-		cmd := exec.Command("sh", "-c", t.Command)
-		// pass the pressed key as environment variable
-		alias, exists := config.GetKeyAlias(causeCode)
-		if !exists {
-			alias = "unknown"
-		}
-		cmd.Env = append(
-			os.Environ(),
-			fmt.Sprintf("key=%s", alias),
-			fmt.Sprintf("key_code=%d", causeCode),
-		)
-		err := cmd.Run()
-		if err != nil {
-			log.Warnf("Execution of command failed: %v", err)
-		}
+		executeCommandWithKey(t.Command, causeCode)
+	case config.ExecPressReleaseBinding:
+		log.Debugf("Executing: %s", t.PressCommand)
+		executeCommandWithKey(t.PressCommand, causeCode)
+		b.execPressReleaseBindings[causeCode] = t
 	}
 }
 
@@ -168,6 +160,12 @@ func (b *Executor) KeyReleased(code uint16) {
 		}
 	}
 
+	// execute ExecPressReleaseBindings
+	if binding, ok := b.execPressReleaseBindings[code]; ok {
+		executeCommandWithKey(binding.ReleaseCommand, code)
+		delete(b.execPressReleaseBindings, code)
+	}
+
 	// inform the keyboard and mouse about key releases
 	b.virtualKeyboard.OriginalKeyUp(code)
 	b.virtualMouse.OriginalKeyUp(code)
@@ -175,27 +173,34 @@ func (b *Executor) KeyReleased(code uint16) {
 
 // goToLayer switches to the given layer and executes the appropriate exit and enter commands if set.
 func (b *Executor) goToLayer(layer *config.Layer) {
-	executeCommandIfNotEmpty(b.currentLayer.ExitCommand)
+	if b.currentLayer.ExitCommand != nil {
+		executeCommand(*b.currentLayer.ExitCommand)
+	}
 	log.Debugf("Switching to layer %v", layer.Name)
 	b.currentLayer = layer
-	executeCommandIfNotEmpty(layer.EnterCommand)
+	if layer.EnterCommand != nil {
+		executeCommand(*layer.EnterCommand)
+	}
 }
 
-func executeCommandIfNotEmpty(command *string) {
-	if command == nil || *command == "" {
-		return
+// executeCommandWithKey executes the given command with the given key as environment variable.
+func executeCommandWithKey(command string, causeCode uint16) {
+	alias, exists := config.GetKeyAlias(causeCode)
+	if !exists {
+		alias = "unknown"
 	}
-	log.Debugf("Executing command: %s", *command)
-	cmd := exec.Command("sh", "-c", *command)
+	executeCommand(command, fmt.Sprintf("key=%s", alias), fmt.Sprintf("key_code=%d", causeCode))
+}
+
+// executeCommand executes the given command with the given environment variables.
+func executeCommand(command string, envs ...string) {
+	log.Debugf("Executing command: %s", command)
+	cmd := exec.Command("sh", "-c", command)
+	cmd.Env = append(os.Environ(), envs...)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		var exitError *exec.ExitError
-		if errors.As(err, &exitError) {
-			log.Warnf("Execution of command '%s' failed: %v", *command, err)
-		} else {
-			log.Warnf("Execution of command '%s' failed: %v, stderr: %s", *command, err, stderr.String())
-		}
+		log.Warnf("Execution of command '%s' failed: %v, stderr: %s", command, err, stderr.String())
 	}
 }

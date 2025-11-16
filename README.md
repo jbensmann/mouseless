@@ -114,18 +114,19 @@ layout.
 Aside from remapping keys, there are a bunch of other actions available, e.g. `rightalt: toggle-layer arrows`, which
 jumps to the arrows layer when rightalt is pressed and jumps back on release. These are all available actions:
 
-| action                    | examples                                  | meaning                                                                                             |
-| ------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `<key-combo>`             | `a`, `comma`, `shift+a`                   | maps to the key (combo)                                                                             |
-| `layer <layer>`           | `layer mouse`                             | switches to the layer with name `mouse`                                                             |
-| `toggle-layer <layer>`    | `toggle-layer mouse`                      | switches to the layer with name `mouse` while the mapped key is pressed                             |
-| `mod-layer <key> <layer>` | `mod-layer leftctrl mouse`                | switches to the layer with name `mouse` for bound keys only, otherwise presses the left control key |
-| `move <x> <y>`            | `move 1 0`                                | moves the pointer in the given direction                                                            |
-| `scroll <direction>`      | `scroll up`                               | scrolls up, down, left or right                                                                     |
-| `speed <multiplier>`      | `speed 2.5`                               | multiplies the pointer and scroll speeds with the given value                                       |
-| `button <button>`         | `button left`                             | presses a mouse button (left, right or middle)                                                      |
-| `exec <cmd>`              | `exec notify-send "hello from mouseless"` | executes the given command (the example sends a desktop notification)                               |
-| `reload-config`           | `reload-config`                           | reloads the configuration file                                                                      |
+| action                              | examples                                                    | meaning                                                                                             |
+| ----------------------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `<key-combo>`                       | `a`, `comma`, `shift+a`                                     | maps to the key (combo)                                                                             |
+| `layer <layer>`                     | `layer mouse`                                               | switches to the layer with name `mouse`                                                             |
+| `toggle-layer <layer>`              | `toggle-layer mouse`                                        | switches to the layer with name `mouse` while the mapped key is pressed                             |
+| `mod-layer <key> <layer>`           | `mod-layer leftctrl mouse`                                  | switches to the layer with name `mouse` for bound keys only, otherwise presses the left control key |
+| `move <x> <y>`                      | `move 1 0`                                                  | moves the pointer in the given direction                                                            |
+| `scroll <direction>`                | `scroll up`                                                 | scrolls up, down, left or right                                                                     |
+| `speed <multiplier>`                | `speed 2.5`                                                 | multiplies the pointer and scroll speeds with the given value                                       |
+| `button <button>`                   | `button left`                                               | presses a mouse button (left, right or middle)                                                      |
+| `exec <cmd>`                        | `exec notify-send "hello from mouseless"`                   | executes the given command (the example sends a desktop notification)                               |
+| `exec-press-release <cmd1>; <cmd2>` | `exec-press-release notify-send press; notify-send release` | executes different commands when the key is pressed and released                                    |
+| `reload-config`                     | `reload-config`                                             | reloads the configuration file                                                                      |
 
 With these actions one could e.g. toggle the mouse layer with `tab: toggle-layer mouse`, so that all bindings from the
 mouse layer are available while `tab` is held down. However, this sacrifices the `tab` key which might not be desirable.
@@ -133,7 +134,7 @@ For these cases there are some "meta actions" which allow to put multiple action
 by KMonad. The arguments of those actions have to be separated with `;`.
 
 | meta action                                                    | example                                            | meaning                                                                                                                       |
-|----------------------------------------------------------------|----------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| -------------------------------------------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `tap-hold <tap action>; <hold action>; <timeout>`              | `tap-hold a; toggle-layer mouse; 300`              | when the mapped key is pressed and released within 300ms, presses a, otherwise toggles the mouse layer                        |
 | `tap-hold-next <tap action>; <hold action>; <timeout>`         | `tap-hold-next a; toggle-layer mouse; 300`         | same as tap-hold, with the addition that the tap action is executed when another key is pressed while `a` is still held down  |
 | `tap-hold-next-release <tap action>; <hold action>; <timeout>` | `tap-hold-next-release a; toggle-layer mouse; 300` | same as tap-hold, with the addition that the tap action is executed when another key is released while `a` is still held down |
