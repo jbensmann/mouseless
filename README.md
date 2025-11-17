@@ -150,33 +150,26 @@ e.g., `esc: esc`.
 ## Custom devices
 
 If you don't want mouseless to read from all keyboards, you can specify one or more devices in the configuration file.
-You can specify devices by their path or by their name.
 
 To find available devices, you can use the `--list-devices` flag:
 
-```shell
+```sh
 sudo mouseless --list-devices
 ```
 
-This will show all input devices with their names and paths. You can also use these commands to find possibles
-candidates:
+This will show all keyboard devices with their names and some other information. In case your keyboard is not detected,
+you can use the `--list-all-devices` flag to show all input device, regardless of whether mouseless thinks it is a
+keyboard or not.
 
-```shell
-ls /dev/input/by-id/*kbd*
-ls /dev/input/by-path/*kbd*
-```
-
-### Device specification format
-
-In your config file, you can then specify devices by their path or name:
+In the config file, you can then specify the name of one or more devices, e.g.:
 
 ```yaml
 devices:
-# by path
-- "/dev/input/by-id/usb-1234_5678-event-kbd"
-# by name
 - "Some keyboard name"
+- "Some other keyboard"
 ```
+
+If you instead want to exclude specific devices, you can use the `devicesExclude` option.
 
 ## Run without root privileges
 
