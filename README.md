@@ -52,6 +52,9 @@ Then you can run mouseless like this:
 sudo mouseless --config ~/.config/mouseless/config.yaml
 ```
 
+Note that after starting, you should release all keys and wait one second before typing again, otherwise keys might get
+stuck in the pressed state (if that happens, stop mouseless and press the stuck key before starting again).
+
 For troubleshooting, you can use the --debug flag to show more verbose log messages.
 
 ## Configuration
