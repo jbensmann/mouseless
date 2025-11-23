@@ -26,21 +26,48 @@ There are various reasons why one would want to control the mouse with the keybo
 
 ## Installation
 
-The simplest way is to download a binary from [Releases](https://github.com/jbensmann/mouseless/releases).
+### Binary Release
 
-Or you can build it from source, first clone the repository and then build it with:
+You can download a precompiled binary from [Releases](https://github.com/jbensmann/mouseless/releases).
 
-```shell
-go build -ldflags="-s -w" .
+The file `mouseless-linux-amd64.tar.gz` contains the executable named `mouseless`. Put it in an appropriate location and
+make it executable, e.g.:
+
+```sh
+tar -xvf mouseless-linux-amd64.tar.gz
+sudo mv dist/mouseless /usr/local/bin/mouseless
+sudo chmod +x /usr/local/bin/mouseless
 ```
 
-When successful, there should be a binary called `mouseless` in the current directory.
+Alternatively, you can use this convenience script to install the latest release and also create a config file if none
+exists yet:
 
-Or you can `go install` it, which puts the binary in your `$GOPATH/bin` directory (default is `$HOME/go/bin`):
+```sh
+wget -O install.sh https://raw.githubusercontent.com/jbensmann/mouseless/refs/heads/main/install.sh
+sh install.sh
+```
+
+> **Note:** You should always check the content of scripts from untrusted sources before executing them.
+
+### From Source
+
+You can download and build mouseless directly with:
 
 ```shell
-go install -ldflags="-s -w" github.com/jbensmann/mouseless@latest
+go install github.com/jbensmann/mouseless@latest
 ```
+
+This places the binary in `$GOPATH/bin/mouseless` (usually `~/go/bin/mouseless`):
+
+Or you can clone and build manually:
+
+```shell
+git clone https://github.com/jbensmann/mouseless.git
+cd mouseless
+go build .
+```
+
+This places the binary in the current directory.
 
 ## Usage
 
@@ -52,8 +79,9 @@ Then you can run mouseless like this:
 sudo mouseless --config ~/.config/mouseless/config.yaml
 ```
 
-Note that after starting, you should release all keys and wait one second before typing again, otherwise keys might get
-stuck in the pressed state (if that happens, stop mouseless and press the stuck key before starting again).
+> **Note:** After starting, release all keys and wait one second before typing. Otherwise, keys might get stuck in the
+> pressed state. If that happens, stop mouseless and press the stuck key before starting again.
+
 
 For troubleshooting, you can use the --debug flag to show more verbose log messages.
 
@@ -118,7 +146,7 @@ Aside from remapping keys, there are a bunch of other actions available, e.g. `r
 jumps to the arrows layer when rightalt is pressed and jumps back on release. These are all available actions:
 
 | action                              | examples                                                    | meaning                                                                                             |
-| ----------------------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+|-------------------------------------|-------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
 | `<key-combo>`                       | `a`, `comma`, `shift+a`                                     | maps to the key (combo)                                                                             |
 | `layer <layer>`                     | `layer mouse`                                               | switches to the layer with name `mouse`                                                             |
 | `toggle-layer <layer>`              | `toggle-layer mouse`                                        | switches to the layer with name `mouse` while the mapped key is pressed                             |
@@ -137,7 +165,7 @@ For these cases there are some "meta actions" which allow to put multiple action
 by KMonad. The arguments of those actions have to be separated with `;`.
 
 | meta action                                                    | example                                            | meaning                                                                                                                       |
-| -------------------------------------------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+|----------------------------------------------------------------|----------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
 | `tap-hold <tap action>; <hold action>; <timeout>`              | `tap-hold a; toggle-layer mouse; 300`              | when the mapped key is pressed and released within 300ms, presses a, otherwise toggles the mouse layer                        |
 | `tap-hold-next <tap action>; <hold action>; <timeout>`         | `tap-hold-next a; toggle-layer mouse; 300`         | same as tap-hold, with the addition that the tap action is executed when another key is pressed while `a` is still held down  |
 | `tap-hold-next-release <tap action>; <hold action>; <timeout>` | `tap-hold-next-release a; toggle-layer mouse; 300` | same as tap-hold, with the addition that the tap action is executed when another key is released while `a` is still held down |
@@ -174,21 +202,40 @@ devices:
 
 If you instead want to exclude specific devices, you can use the `devicesExclude` option.
 
-## Run without root privileges
+## Run without sudo
 
-To run without using sudo, you can add an udev rule with the following command, which allows your user to read from
-keyboard devices and create a virtual keyboard and mouse:
+To run mouseless without root privileges, you need to give your user permission to read from keyboard devices and to
+create virtual input devices.
+
+> **Note:** Doing so gives all applications running under your user the ability to read from your keyboards,
+> so this does have some security implications. If you want to avoid this, you can create a separate user for running
+> mouseless only and give that user the necessary permissions instead.
+
+
+First make sure that the uinput group exists and add your user to the `input` and `uinput` groups:
 
 ```sh
-sudo tee /etc/udev/rules.d/99-$USER.rules <<EOF
-KERNEL=="uinput", GROUP="$USER", MODE:="0660"
-KERNEL=="event*", GROUP="$USER", NAME="input/%k", MODE="660"
+sudo groupadd --system uinput
+sudo usermod -a -G input,uinput $USER
+```
+
+Then add a udev rule so that users in the `uinput` group can create uinput devices:
+
+```sh
+sudo tee /etc/udev/rules.d/99-mouseless.rules <<EOF
+KERNEL=="uinput", GROUP="uinput", MODE="0660"
 EOF
 ```
 
 To apply the changes, you can simply reboot your machine.
-In case that does not work, it might be that the uinput kernel module is not loaded, which can be fixed with this,
-followed by a reboot:
+
+If it still doesn’t work, the uinput kernel module might not be loaded, which you can do manually with:
+
+```sh
+sudo modprobe uinput
+```
+
+To load the uinput module automatically at boot, create this file:
 
 ```sh
 echo "uinput" | sudo tee /etc/modules-load.d/uinput.conf
@@ -202,20 +249,20 @@ One option to automatically start mouseless at startup is using `systemd`, which
 
 1. Download the latest release of mouseless, e.g. to `/usr/local/bin/mouseless`, and make it executable,
    e.g. `sudo chmod +x /usr/local/bin/mouseless`.
-2. Create a file called `mouseless.service` in `/etc/systemd/system/` with the following content (replace the config
-   file path):
-
-   ```
+2. Create a service file (replace the config file path):
+   ```sh
+   sudo tee /etc/systemd/system/mouseless.service <<EOF
    [Unit]
    Description=mouseless
 
    [Service]
+   Type=simple
    ExecStart=/usr/local/bin/mouseless --config /path/to/config.yaml
 
    [Install]
    WantedBy=multi-user.target
+   EOF
    ```
-
 3. Enable and start the service:
    ```sh
    sudo systemctl enable mouseless.service
@@ -229,13 +276,31 @@ One option to automatically start mouseless at startup is using `systemd`, which
 ### Without root privileges
 
 One can also install mouseless for a specific user only (the user needs to have permission to run mouseless, see
-section `Run without root privileges`):
+section `Run without sudo`):
 
 1. Download the latest release of mouseless, e.g. to `$HOME/.local/bin/mouseless`, and make it executable,
-   e.g. `sudo chmod +x $HOME/.local/bin/mouseless`.
-2. Create the file `mouseless.service` mentioned in the previous section in `$HOME/.config/systemd/user/`.
-3. Enable and start the mouseless:
+   e.g. `chmod +x $HOME/.local/bin/mouseless`.
+2. Create a service file (replace the config file path):
    ```sh
+   tee "$HOME/.config/systemd/user/mouseless.service" <<EOF
+   [Unit]
+   Description=mouseless
+
+   [Service]
+   Type=simple
+   ExecStart=$HOME/.local/bin/mouseless --config /path/to/config.yaml
+
+   [Install]
+   WantedBy=default.target
+   EOF
+   ```
+3. Enable and start the service:
+   ```sh
+   systemctl --user daemon-reload
    systemctl --user enable mouseless.service
    systemctl --user start mouseless.service
+   ```
+   You can check the status with:
+   ```sh
+   systemctl status --user mouseless.service
    ```
