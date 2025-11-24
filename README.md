@@ -247,60 +247,66 @@ One option to automatically start mouseless at startup is using `systemd`, which
 
 ### With root privileges
 
-1. Download the latest release of mouseless, e.g. to `/usr/local/bin/mouseless`, and make it executable,
-   e.g. `sudo chmod +x /usr/local/bin/mouseless`.
-2. Create a service file (replace the config file path):
-   ```sh
-   sudo tee /etc/systemd/system/mouseless.service <<EOF
-   [Unit]
-   Description=mouseless
+Create a service file (replace the config file path, and the path to the mouseless binary if necessary):
 
-   [Service]
-   Type=simple
-   ExecStart=/usr/local/bin/mouseless --config /path/to/config.yaml
+ ```sh
+ sudo tee /etc/systemd/system/mouseless.service <<EOF
+ [Unit]
+ Description=mouseless
 
-   [Install]
-   WantedBy=multi-user.target
-   EOF
-   ```
-3. Enable and start the service:
-   ```sh
-   sudo systemctl enable mouseless.service
-   sudo systemctl start mouseless.service
-   ```
-   You can check the status with:
-   ```sh
-   sudo systemctl status mouseless.service
-   ```
+ [Service]
+ Type=simple
+ ExecStart=/usr/local/bin/mouseless --config /path/to/config.yaml
+
+ [Install]
+ WantedBy=multi-user.target
+ EOF
+ ```
+
+Enable and start the service:
+
+ ```sh
+ sudo systemctl enable mouseless.service
+ sudo systemctl start mouseless.service
+ ```
+
+You can check the status with:
+
+ ```sh
+ sudo systemctl status mouseless.service
+ ```
 
 ### Without root privileges
 
-One can also install mouseless for a specific user only (the user needs to have permission to run mouseless, see
-section `Run without sudo`):
+You can also install mouseless for a specific user only (the user needs to have permission to run mouseless, see
+section `Run without sudo`).
 
-1. Download the latest release of mouseless, e.g. to `$HOME/.local/bin/mouseless`, and make it executable,
-   e.g. `chmod +x $HOME/.local/bin/mouseless`.
-2. Create a service file (replace the config file path):
-   ```sh
-   tee "$HOME/.config/systemd/user/mouseless.service" <<EOF
-   [Unit]
-   Description=mouseless
+Create a service file (replace the config file path):
 
-   [Service]
-   Type=simple
-   ExecStart=$HOME/.local/bin/mouseless --config /path/to/config.yaml
+ ```sh
+ tee "$HOME/.config/systemd/user/mouseless.service" <<EOF
+ [Unit]
+ Description=mouseless
 
-   [Install]
-   WantedBy=default.target
-   EOF
-   ```
-3. Enable and start the service:
-   ```sh
-   systemctl --user daemon-reload
-   systemctl --user enable mouseless.service
-   systemctl --user start mouseless.service
-   ```
-   You can check the status with:
-   ```sh
-   systemctl status --user mouseless.service
-   ```
+ [Service]
+ Type=simple
+ ExecStart=$HOME/.local/bin/mouseless --config /path/to/config.yaml
+
+ [Install]
+ WantedBy=default.target
+ EOF
+ ```
+
+Enable and start the service:
+
+ ```sh
+ systemctl --user daemon-reload
+ systemctl --user enable mouseless.service
+ systemctl --user start mouseless.service
+ ```
+
+You can check the status with:
+
+ ```sh
+ systemctl status --user mouseless.service
+ ```
