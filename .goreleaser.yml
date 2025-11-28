@@ -31,7 +31,7 @@ checksum:
 release:
   github:
     owner: jbensmann
-    name: mouseless
+    name: mouseless-test
   draft: false
   prerelease: auto
   name_template: "{{ .ProjectName }} v{{ .Version }}"
