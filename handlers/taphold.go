@@ -151,9 +151,9 @@ func (t *TapHoldHandler) handleNextEvent() {
 	} else {
 		// state TapHoldStateWait
 		_, wasPressed := t.holdBackStartIsPressed[event.Code]
-		if !event.IsPress && wasPressed {
-			// forward a key release where the press was before the tap hold started
-			// todo: make this configurable?
+		// forward a key release where the press was before the tap hold started, to prevent auto-repeat to kick in
+		// but we don't want and need this for modifiers
+		if !event.IsPress && wasPressed && !config.IsModifierKey(event.Code) {
 			log.Debugf("TapHoldHandler: forwarding key release %v which was pressed before the tap hold started", event.Code)
 			t.eventHandled(t.eventInPosition)
 		} else {

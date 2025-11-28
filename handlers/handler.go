@@ -13,6 +13,7 @@ type EventBinding struct {
 type LayerManager interface {
 	CurrentLayer() *config.Layer
 	BaseLayer() *config.Layer
+	GetLayer(name string) (*config.Layer, bool)
 }
 
 type EventHandler interface {

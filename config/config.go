@@ -1,13 +1,15 @@
 package config
 
 import (
+	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
 	"io"
 	"os"
 	"strconv"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 )
 
 type Action string
@@ -16,6 +18,7 @@ const (
 	ActionTapHold            Action = "tap-hold"
 	ActionTapHoldNext        Action = "tap-hold-next"
 	ActionTapHoldNextRelease Action = "tap-hold-next-release"
+	ActionModLayer           Action = "mod-layer"
 	ActionMulti              Action = "multi"
 	ActionLayer              Action = "layer"
 	ActionToggleLayer        Action = "toggle-layer"
@@ -25,12 +28,14 @@ const (
 	ActionSpeed              Action = "speed"
 	ActionButton             Action = "button"
 	ActionExec               Action = "exec"
+	ActionExecPressRelease   Action = "exec-press-release"
 	ActionNop                Action = "nop"
 )
 
 // RawConfig defines the structure of the config file.
 type RawConfig struct {
 	Devices                []string   `yaml:"devices"`
+	DevicesExclude         []string   `yaml:"devicesExclude"`
 	StartCommand           string     `yaml:"startCommand"`
 	MouseLoopInterval      int64      `yaml:"mouseLoopInterval"`
 	BaseMouseSpeed         float64    `yaml:"baseMouseSpeed"`
@@ -42,6 +47,7 @@ type RawConfig struct {
 	BaseScrollSpeed        float64    `yaml:"baseScrollSpeed"`
 	QuickTapTime           float64    `yaml:"quickTapTime"`
 	ComboTime              float64    `yaml:"comboTime"`
+	InstanceName           string     `yaml:"instanceName"`
 	Layers                 []RawLayer `yaml:"layers"`
 }
 
@@ -56,6 +62,7 @@ type RawLayer struct {
 // Config is the parsed form of RawConfig.
 type Config struct {
 	Devices                []string
+	DevicesExclude         []string
 	StartCommand           string
 	MouseLoopInterval      int64
 	QuickTapTime           float64
@@ -67,6 +74,7 @@ type Config struct {
 	MouseDecelerationTime  float64
 	StartMouseSpeed        float64
 	BaseScrollSpeed        float64
+	InstanceName           string
 	Layers                 []*Layer
 }
 
@@ -101,6 +109,12 @@ type TapHoldBinding struct {
 	TimeoutMs        int64
 	TapOnNext        bool
 	TapOnNextRelease bool
+}
+
+type ModLayerBinding struct {
+	BaseBinding
+	ModKey uint16
+	Layer  string
 }
 
 type LayerBinding struct {
@@ -141,6 +155,21 @@ type ExecBinding struct {
 	BaseBinding
 	Command string
 }
+type ExecPressReleaseBinding struct {
+	BaseBinding
+	PressCommand   string
+	ReleaseCommand string
+}
+
+// these are only used internally
+type KeyPressBinding struct {
+	BaseBinding
+	Key uint16
+}
+type KeyReleaseBinding struct {
+	BaseBinding
+	Key uint16
+}
 
 // ReadConfig reads and parses the configuration from the given file.
 func ReadConfig(fileName string) (*Config, error) {
@@ -166,12 +195,21 @@ func ParseConfig(configBytes []byte) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	// log a warning for unknown or duplicate keys
+	err = yaml.UnmarshalStrict(configBytes, &rawConfig)
+	var typeError *yaml.TypeError
+	if errors.As(err, &typeError) {
+		for _, e := range typeError.Errors {
+			log.Warnf("problem in the config file: %v", e)
+		}
+	}
 
 	config := Config{
 		MouseAccelerationCurve: 1.0,
 		MouseDecelerationCurve: 1.0,
 	}
 	config.Devices = rawConfig.Devices
+	config.DevicesExclude = rawConfig.DevicesExclude
 	config.StartCommand = rawConfig.StartCommand
 	if rawConfig.MouseLoopInterval > 0 {
 		config.MouseLoopInterval = rawConfig.MouseLoopInterval
@@ -189,11 +227,15 @@ func ParseConfig(configBytes []byte) (*Config, error) {
 	config.MouseDecelerationTime = rawConfig.MouseDecelerationTime
 	config.StartMouseSpeed = rawConfig.StartMouseSpeed
 	config.BaseScrollSpeed = rawConfig.BaseScrollSpeed
+	config.InstanceName = rawConfig.InstanceName
 	config.QuickTapTime = rawConfig.QuickTapTime
 	if rawConfig.ComboTime > 0 {
 		config.ComboTime = rawConfig.ComboTime
 	} else {
 		config.ComboTime = 25
+	}
+	if len(rawConfig.Layers) == 0 {
+		return nil, fmt.Errorf("no layers defined")
 	}
 	for i, l := range rawConfig.Layers {
 		layer, err := parseLayer(l)
@@ -317,6 +359,15 @@ func parseBinding(rawBinding string) (binding Binding, err error) {
 		}
 		tapHoldBinding.TapOnNextRelease = true
 		binding = tapHoldBinding
+	case string(ActionModLayer):
+		if len(args) != 2 {
+			return nil, fmt.Errorf("action requires exactly two arguments")
+		}
+		key, err := parseKey(args[0])
+		if err != nil {
+			return nil, err
+		}
+		binding = ModLayerBinding{ModKey: key, Layer: args[1]}
 	case string(ActionLayer):
 		if len(args) != 1 {
 			return nil, fmt.Errorf("action requires exactly one argument")
@@ -385,6 +436,15 @@ func parseBinding(rawBinding string) (binding Binding, err error) {
 			return nil, fmt.Errorf("action requires at least one argument")
 		}
 		binding = ExecBinding{Command: argString}
+	case string(ActionExecPressRelease):
+		commands := strings.Split(argString, ";")
+		if len(commands) != 2 {
+			return nil, fmt.Errorf("exec-press-release requires exactly two commands (separated by ;)")
+		}
+		binding = ExecPressReleaseBinding{
+			PressCommand:   commands[0],
+			ReleaseCommand: commands[1],
+		}
 	case string(ActionNop):
 		if len(args) != 0 {
 			return nil, fmt.Errorf("action does not take any argument")

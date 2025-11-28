@@ -1,6 +1,17 @@
-# the keyboard devices it reads from, if no devices are specified, it reads from all
+# the keyboard devices to read from, if left empty, it reads from all keyboards
+# one can either specify the name or path of the device (preferably the name, as the path might change)
+# run `mouseless -l` to see all available devices
 devices:
-# - "/dev/input/by-id/SOME_KEYBOARD_REPLACE_ME-event-kbd"
+# - "Name of keyboard"
+# - "/dev/input/by-id/usb-1234_5678-event-kbd"
+
+# one can also exclude specific devices with this option
+devicesExclude:
+# - "Name of keyboard"
+# - "/dev/input/by-id/usb-1234_5678-event-kbd"
+
+# in case one wants to run multiple instances of mouseless, they must have different instanceNames
+# instanceName: "mouseless"
 
 # this is executed when mouseless starts, e.g. useful for setting the keyboard layout
 # startCommand: "setxkbmap de"
@@ -43,6 +54,8 @@ layers:
     capslock: esc
     # key combos are activated when both keys are pressed simultaneously
     f+d: layer mouse
+    # map ctrl+h/j/k/l to arrow keys
+    leftctrl: mod-layer leftctrl vim-arrows
 # a layer for mouse movement
 - name: mouse
   # when true, keys that are not mapped keep their original meaning
@@ -84,3 +97,9 @@ layers:
     v: enter
     # _ is the wildcard key, which matches any key that is not mapped
     _: rightalt+_
+- name: vim-arrows
+  bindings:
+    h: left
+    j: down
+    k: up
+    l: right
