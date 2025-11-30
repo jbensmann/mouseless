@@ -19,7 +19,7 @@ builds:
     main: .
 
 archives:
-  - format: tar.gz
+  - formats: [ tar.gz ]
     name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
     files:
       - mouseless*
