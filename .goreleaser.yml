@@ -34,4 +34,4 @@ release:
     name: mouseless-test
   draft: false
   prerelease: auto
-  name_template: "{{ .ProjectName }} v{{ .Version }}"
+  name_template: "v{{ .Version }}"
