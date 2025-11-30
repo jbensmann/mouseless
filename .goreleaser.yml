@@ -26,7 +26,7 @@ archives:
     wrap_in_directory: false
 
 checksum:
-  name_template: "{{ .ProjectName }}-{{ .Version }}-checksums.txt"
+  name_template: "{{ .ProjectName }}_checksums.txt"
 
 release:
   github:
