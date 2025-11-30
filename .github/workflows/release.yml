@@ -21,26 +21,19 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.22'
-
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser
-          version: "~> v2"
-          args: | 
-            release --clean --release-notes <(awk '
-              /^## / {
+      - name: Extract release notes
+        run: |
+          awk '
+            /^## / {
               h++
-              if (h == 1) next     # skip first header
-              else exit            # stop at second
+              if (h == 1) next
+              else exit
             }
-
             h == 1 {
               sub(/^### /, "## ")
               n++
               lines[n] = $0
             }
-
             END {
               s = 1
               while (s <= n && lines[s] ~ /^$/) s++
@@ -48,6 +41,13 @@ jobs:
               while (e >= s && lines[e] ~ /^$/) e--
               for (i = s; i <= e; i++) print lines[i]
             }
-            ' CHANGELOG.md)
+          ' CHANGELOG.md > release_notes.md
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: | 
+            release --clean --release-notes release_notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
