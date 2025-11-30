@@ -27,6 +27,27 @@ jobs:
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --clean
+          args: | 
+            release --clean --release-notes <(awk '
+              /^## / {
+              h++
+              if (h == 1) next     # skip first header
+              else exit            # stop at second
+            }
+
+            h == 1 {
+              sub(/^### /, "## ")
+              n++
+              lines[n] = $0
+            }
+
+            END {
+              s = 1
+              while (s <= n && lines[s] ~ /^$/) s++
+              e = n
+              while (e >= s && lines[e] ~ /^$/) e--
+              for (i = s; i <= e; i++) print lines[i]
+            }
+            ' CHANGELOG.md)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
