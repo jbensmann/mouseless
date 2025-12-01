@@ -29,9 +29,6 @@ checksum:
   name_template: "checksums.txt"
 
 release:
-  github:
-    owner: jbensmann
-    name: mouseless-test
   draft: false
   prerelease: auto
   name_template: "v{{ .Version }}"
