@@ -30,12 +30,12 @@ There are various reasons why one would want to control the mouse with the keybo
 
 You can download a precompiled binary from [Releases](https://github.com/jbensmann/mouseless/releases).
 
-The file `mouseless-linux-amd64.tar.gz` contains the executable named `mouseless`. Put it in an appropriate location and
+The file `mouseless_linux_amd64.tar.gz` contains the executable named `mouseless`. Put it in an appropriate location and
 make it executable, e.g.:
 
 ```sh
-tar -xvf mouseless-linux-amd64.tar.gz
-sudo mv dist/mouseless /usr/local/bin/mouseless
+tar -xvf mouseless_linux_amd64.tar.gz
+sudo mv mouseless /usr/local/bin/mouseless
 sudo chmod +x /usr/local/bin/mouseless
 ```
 

@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Support high-resolution scrolling (applications need to support it).
+- High-resolution scrolling (applications need to support it).
 - Devices can now also be specified by their name.
 - New config option `devicesExclude` to ignore specific devices (#67).
 - New flag `--list-devices` to list available input devices.

@@ -2,11 +2,11 @@
 echo "Downloading the latest version of mouseless..."
 TMPDIR="$(mktemp -d)"
 cd "$TMPDIR" || exit 1
-curl -L --progress-bar -o mouseless-linux-amd64.tar.gz \
-  "https://github.com/jbensmann/mouseless/releases/latest/download/mouseless-linux-amd64.tar.gz" || exit 1
-tar -xf mouseless-linux-amd64.tar.gz || exit 1
+curl -L --progress-bar -o mouseless_linux_amd64.tar.gz \
+  "https://github.com/jbensmann/mouseless/releases/latest/download/mouseless_linux_amd64.tar.gz" || exit 1
+tar -xf mouseless_linux_amd64.tar.gz || exit 1
 echo "Installing to /usr/local/bin/mouseless"
-sudo install -m 755 dist/mouseless /usr/local/bin/mouseless || exit 1
+sudo install -m 755 mouseless /usr/local/bin/mouseless || exit 1
 
 # create a config file if it does not exist
 CONFIGDIR="$HOME/.config/mouseless"
