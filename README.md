@@ -1,5 +1,10 @@
 # mouseless
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/jbensmann/mouseless)](https://goreportcard.com/report/github.com/jbensmann/mouseless)
+[![Releases](https://img.shields.io/github/downloads/jbensmann/mouseless/total)](https://github.com/jbensmann/mouseless/releases)
+[![release](https://img.shields.io/github/v/release/jbensmann/mouseless)](https://github.com/jbensmann/mouseless/releases)
+[![license](https://img.shields.io/github/license/jbensmann/mouseless)](https://github.com/jbensmann/mouseless/blob/main/LICENSE)
+
 This program lets you control the mouse pointer in Linux using the keyboard. It works across all Linux distributions,
 including those running Wayland.
 
