@@ -158,6 +158,7 @@ jumps to the arrows layer when rightalt is pressed and jumps back on release. Th
 | `exec <cmd>`                        | `exec notify-send "hello from mouseless"`                   | executes the given command (the example sends a desktop notification)                               |
 | `exec-press-release <cmd1>; <cmd2>` | `exec-press-release notify-send press; notify-send release` | executes different commands when the key is pressed and released                                    |
 | `reload-config`                     | `reload-config`                                             | reloads the configuration file                                                                      |
+| `nop`                               | `nop`                                                       | does nothing, can be used to disable a key                                                          |
 
 With these actions one could e.g. toggle the mouse layer with `tab: toggle-layer mouse`, so that all bindings from the
 mouse layer are available while `tab` is held down. However, this sacrifices the `tab` key which might not be desirable.
