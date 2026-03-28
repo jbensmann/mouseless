@@ -195,12 +195,14 @@ func executeCommandWithKey(command string, causeCode uint16) {
 // executeCommand executes the given command with the given environment variables.
 func executeCommand(command string, envs ...string) {
 	log.Debugf("Executing command: %s", command)
-	cmd := exec.Command("sh", "-c", command)
-	cmd.Env = append(os.Environ(), envs...)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	if err != nil {
-		log.Warnf("Execution of command '%s' failed: %v, stderr: %s", command, err, stderr.String())
-	}
+	go func() {
+		cmd := exec.Command("sh", "-c", command)
+		cmd.Env = append(os.Environ(), envs...)
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		err := cmd.Run()
+		if err != nil {
+			log.Warnf("Execution of command '%s' failed: %v, stderr: %s", command, err, stderr.String())
+		}
+	}()
 }
