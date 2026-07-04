@@ -29,6 +29,18 @@ There are various reasons why one would want to control the mouse with the keybo
 - precise control
 - for fun
 
+## Table of Contents
+
+- [Installation](#installation)
+  - [Binary Release](#binary-release)
+  - [From Source](#from-source)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Custom devices](#custom-devices)
+- [Run without sudo](#run-without-sudo)
+- [Run at startup with systemd](#run-at-startup-with-systemd)
+- [Pointer acceleration](#pointer-acceleration)
+
 ## Installation
 
 ### Binary Release
@@ -316,3 +328,66 @@ You can check the status with:
  ```sh
  systemctl status --user mouseless.service
  ```
+
+## Pointer acceleration
+
+mouseless emits mouse events through a virtual mouse device, which means that your desktop environment applies its
+usual pointer acceleration on top, just like for a physical mouse. As a result, the effective pointer speed grows more
+than linearly: a `speed 2.0` binding moves the pointer more than twice as fast, and moving diagonally feels faster than
+expected.
+
+If you prefer a linear response, you can disable the acceleration for the virtual mouse only, so that your physical
+mouse or touchpad is not affected. The virtual device is named `mouseless mouse` with vendor id `18193` and product
+id `2070` (if you set the `instanceName` config option, the name changes accordingly).
+
+How to disable the acceleration depends on your environment:
+
+**river** (in `~/.config/river/init`):
+
+```sh
+riverctl input pointer-18193-2070-mouseless_mouse accel-profile flat
+```
+
+**sway** (in `~/.config/sway/config`):
+
+```
+input "18193:2070:mouseless_mouse" accel_profile flat
+```
+
+**Hyprland** (in `~/.config/hypr/hyprland.lua`):
+
+```lua
+hl.device({
+    name = "mouseless-mouse",
+    accel_profile = "flat",
+})
+```
+
+**KDE Plasma**: with mouseless running, open System Settings → Mouse & Touchpad, select the device `mouseless mouse`
+and set the pointer acceleration profile to flat.
+
+**GNOME**: unfortunately GNOME has no per-device settings, so this affects physical mice as well:
+
+```sh
+gsettings set org.gnome.desktop.peripherals.mouse accel-profile 'flat'
+```
+
+**X11**:
+
+```sh
+xinput set-prop "mouseless mouse" "libinput Accel Profile Enabled" 0, 1
+```
+
+Note that Wayland compositors apply the setting automatically whenever the virtual device appears, so it does not
+matter whether mouseless is running yet. With `xinput` the device has to exist, so the command has to be run after
+mouseless has started, for example with the `startCommand` config option:
+
+```yaml
+startCommand: xinput set-prop "mouseless mouse" "libinput Accel Profile Enabled" 0, 1
+```
+
+This only works if mouseless runs as your own user, because when started with `sudo`, the command cannot connect to your
+display session.
+
+Since the pointer now moves slower than before, you might want to increase `baseMouseSpeed` and adjust the `speed`
+values to compensate.
