@@ -5,10 +5,13 @@
 [![release](https://img.shields.io/github/v/release/jbensmann/mouseless)](https://github.com/jbensmann/mouseless/releases)
 [![license](https://img.shields.io/github/license/jbensmann/mouseless)](https://github.com/jbensmann/mouseless/blob/main/LICENSE)
 
-This program lets you control the mouse pointer in Linux using the keyboard. It works across all Linux distributions,
+This program lets you control the mouse pointer on Linux using the keyboard. It works across all Linux distributions,
 including those running Wayland.
 
 It is the successor to [xmouseless](https://github.com/jbensmann/xmouseless).
+
+> **Note:** There is an unrelated commercial app called *Mouseless* that unfortunately ended up with the same name. This
+> project (mouseless) is free and open source.
 
 ## Features
 
@@ -20,11 +23,11 @@ It is the successor to [xmouseless](https://github.com/jbensmann/xmouseless).
 
 ## Why
 
-There are various reasons why one would want to control the mouse with the keyboard:
+There are many reasons to control the mouse with the keyboard:
 
 - keep your hands on the keyboard
-- laptop with no or a poor touchpad
-- no mouse at hand
+- a laptop with a poor touchpad, or none at all
+- no mouse nearby
 - cannot use a mouse for some reason
 - precise control
 - for fun
@@ -43,7 +46,7 @@ There are various reasons why one would want to control the mouse with the keybo
 
 ## Installation
 
-### Binary Release
+### Binary release
 
 You can download a precompiled binary from [Releases](https://github.com/jbensmann/mouseless/releases).
 
@@ -64,9 +67,7 @@ wget -O install.sh https://raw.githubusercontent.com/jbensmann/mouseless/refs/he
 sh install.sh
 ```
 
-> **Note:** You should always check the content of scripts from untrusted sources before executing them.
-
-### From Source
+### From source
 
 You can download and build mouseless directly with:
 
@@ -74,7 +75,7 @@ You can download and build mouseless directly with:
 go install github.com/jbensmann/mouseless@latest
 ```
 
-This places the binary in `$GOPATH/bin/mouseless` (usually `~/go/bin/mouseless`):
+This places the binary in `$GOPATH/bin/mouseless` (usually `~/go/bin/mouseless`).
 
 Or you can clone and build manually:
 
@@ -99,13 +100,12 @@ sudo mouseless --config ~/.config/mouseless/config.yaml
 > **Note:** After starting, release all keys and wait one second before typing. Otherwise, keys might get stuck in the
 > pressed state. If that happens, stop mouseless and press the stuck key before starting again.
 
-
-For troubleshooting, you can use the --debug flag to show more verbose log messages.
+For troubleshooting, you can use the `--debug` flag to show more verbose log messages.
 
 ## Configuration
 
-The configuration file is in YAML format, you do not need to know exactly what that means, just make sure
-that the indentation level of the lines is correct.
+The configuration file is in YAML format. You do not need to know exactly what that means; just make sure
+the indentation is correct.
 Lines starting with a `#` are comments.
 Here is a minimal example with only one additional layer for mouse movement:
 
@@ -149,17 +149,17 @@ layers:
 Here you can also find a more comprehensive example that illustrates most available features and config
 options: [config_full.yaml](./example_configs/config_full.yaml)
 
-One can define an arbitrary number of layers, each with an arbitrary number of bindings, e.g. `esc: capslock`
+You can define an arbitrary number of layers, each with an arbitrary number of bindings, e.g. `esc: capslock`
 which maps the escape key to capslock. If you do not know the name of a key, you can start mouseless with the
---debug flag, press the key and look for an output like `Pressed:  rightalt (100)`, which tells you that the name of the
+`--debug` flag, press the key and look for an output like `Pressed:  rightalt (100)`, which tells you that the name of the
 key is `rightalt`. Alternatively you can also use the keycode in the parentheses, which is 100 in this case. Note that
 the name of a key does not necessarily match what is printed on your keyboard, e.g. with a German layout where the `y`
 and `z` keys are swapped in comparison to the English layout, but the name of the `z` key is `y` and vice versa.
 
-One can also map a key to multiple ones like `a: leftshift+k1` which results in `!`, at least for an English or German
+You can also map a key to multiple ones like `a: leftshift+k1` which results in `!`, at least for an English or German
 layout.
 
-Aside from remapping keys, there are a bunch of other actions available, e.g. `rightalt: toggle-layer arrows`, which
+Aside from remapping keys, there are several other actions available, e.g. `rightalt: toggle-layer arrows`, which
 jumps to the arrows layer when rightalt is pressed and jumps back on release. These are all available actions:
 
 | action                              | examples                                                    | meaning                                                                                             |
@@ -177,9 +177,9 @@ jumps to the arrows layer when rightalt is pressed and jumps back on release. Th
 | `reload-config`                     | `reload-config`                                             | reloads the configuration file                                                                      |
 | `nop`                               | `nop`                                                       | does nothing, can be used to disable a key                                                          |
 
-With these actions one could e.g. toggle the mouse layer with `tab: toggle-layer mouse`, so that all bindings from the
-mouse layer are available while `tab` is held down. However, this sacrifices the `tab` key which might not be desirable.
-For these cases there are some "meta actions" which allow to put multiple actions on a single key and which are inspired
+With these actions you could e.g. toggle the mouse layer with `tab: toggle-layer mouse`, so that all bindings from the
+mouse layer are available while `tab` is held down. However, this sacrifices the `tab` key, which might not be desirable.
+For these cases there are some "meta actions" which let you put multiple actions on a single key and which are inspired
 by KMonad. The arguments of those actions have to be separated with `;`.
 
 | meta action                                                    | example                                            | meaning                                                                                                                       |
@@ -192,7 +192,7 @@ by KMonad. The arguments of those actions have to be separated with `;`.
 Another option to trigger actions is via key combos, e.g. `f+d: layer mouse`, which is triggered when `f` and `d` are
 pressed simultaneously. The maximum duration between the presses is defined with the `comboTime` config option.
 
-Pressing `esc` always returns to the initial layer (if not already there), which is helpful if one gets stuck or is
+Pressing `esc` always returns to the initial layer (if not already there), which is helpful if you get stuck or are
 unsure of the current layer. To disable this behaviour for a specific layer, you can explicitly map the key,
 e.g., `esc: esc`.
 
@@ -207,8 +207,8 @@ sudo mouseless --list-devices
 ```
 
 This will show all keyboard devices with their names and some other information. In case your keyboard is not detected,
-you can use the `--list-all-devices` flag to show all input device, regardless of whether mouseless thinks it is a
-keyboard or not.
+you can use the `--list-all-devices` flag to show all input devices, regardless of whether mouseless thinks it is a
+keyboard.
 
 In the config file, you can then specify the name of one or more devices, e.g.:
 
@@ -229,7 +229,6 @@ create virtual input devices.
 > so this does have some security implications. If you want to avoid this, you can create a separate user for running
 > mouseless only and give that user the necessary permissions instead.
 
-
 First make sure that the uinput group exists and add your user to the `input` and `uinput` groups:
 
 ```sh
@@ -247,7 +246,7 @@ EOF
 
 To apply the changes, you can simply reboot your machine.
 
-If it still doesn’t work, the uinput kernel module might not be loaded, which you can do manually with:
+If it still doesn’t work, the uinput kernel module might not be loaded, which you can load manually with:
 
 ```sh
 sudo modprobe uinput
@@ -267,32 +266,32 @@ One option to automatically start mouseless at startup is using `systemd`, which
 
 Create a service file (replace the config file path, and the path to the mouseless binary if necessary):
 
- ```sh
- sudo tee /etc/systemd/system/mouseless.service <<EOF
- [Unit]
- Description=mouseless
+```sh
+sudo tee /etc/systemd/system/mouseless.service <<EOF
+[Unit]
+Description=mouseless
 
- [Service]
- Type=simple
- ExecStart=/usr/local/bin/mouseless --config /path/to/config.yaml
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/mouseless --config /path/to/config.yaml
 
- [Install]
- WantedBy=multi-user.target
- EOF
- ```
+[Install]
+WantedBy=multi-user.target
+EOF
+```
 
 Enable and start the service:
 
- ```sh
- sudo systemctl enable mouseless.service
- sudo systemctl start mouseless.service
- ```
+```sh
+sudo systemctl enable mouseless.service
+sudo systemctl start mouseless.service
+```
 
 You can check the status with:
 
- ```sh
- sudo systemctl status mouseless.service
- ```
+```sh
+sudo systemctl status mouseless.service
+```
 
 ### Without root privileges
 
@@ -301,33 +300,33 @@ section `Run without sudo`).
 
 Create a service file (replace the config file path):
 
- ```sh
- tee "$HOME/.config/systemd/user/mouseless.service" <<EOF
- [Unit]
- Description=mouseless
+```sh
+tee "$HOME/.config/systemd/user/mouseless.service" <<EOF
+[Unit]
+Description=mouseless
 
- [Service]
- Type=simple
- ExecStart=$HOME/.local/bin/mouseless --config /path/to/config.yaml
+[Service]
+Type=simple
+ExecStart=$HOME/.local/bin/mouseless --config /path/to/config.yaml
 
- [Install]
- WantedBy=default.target
- EOF
- ```
+[Install]
+WantedBy=default.target
+EOF
+```
 
 Enable and start the service:
 
- ```sh
- systemctl --user daemon-reload
- systemctl --user enable mouseless.service
- systemctl --user start mouseless.service
- ```
+```sh
+systemctl --user daemon-reload
+systemctl --user enable mouseless.service
+systemctl --user start mouseless.service
+```
 
 You can check the status with:
 
- ```sh
- systemctl status --user mouseless.service
- ```
+```sh
+systemctl status --user mouseless.service
+```
 
 ## Pointer acceleration
 
