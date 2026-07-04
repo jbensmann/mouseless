@@ -67,6 +67,15 @@ func (b *EventHandlerMock) CurrentLayer() *config.Layer {
 	panic(fmt.Sprintf("non existing layer: %s", b.currentLayer))
 }
 
+func (b *EventHandlerMock) GetLayer(name string) (*config.Layer, bool) {
+	for _, layer := range b.layers {
+		if layer.Name == name {
+			return layer, true
+		}
+	}
+	return nil, false
+}
+
 func (b *EventHandlerMock) SetNextHandler(_ EventHandler) {
 }
 
