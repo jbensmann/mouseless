@@ -85,7 +85,7 @@ func (b *EventHandlerMock) SetLayerManager(_ LayerManager) {
 func testHandler(t *testing.T, handlerGenerator func() EventHandler, configStr string, tests [][]string) {
 	conf, err := config.ParseConfig([]byte(configStr))
 	if err != nil {
-		t.Fatal(fmt.Sprintf("Error parsing config: %v", err))
+		t.Fatalf("Error parsing config: %v", err)
 	}
 	for _, test := range tests {
 		handler := handlerGenerator()
@@ -174,14 +174,15 @@ func parseEventBinding(eventBinding string) EventBinding {
 	var binding config.Binding
 	if len(split) > 1 {
 		b := split[1]
-		if b[0] == 'K' {
+		switch b[0] {
+		case 'K':
 			code, _ = config.GetKeyCode(b[1:])
 			binding = config.KeyBinding{KeyCombo: []uint16{code}}
-		} else if b[0] == 'L' {
+		case 'L':
 			binding = config.ToggleLayerBinding{Layer: b[1:]}
-		} else if b[0] == 'N' {
+		case 'N':
 			binding = config.NopBinding{}
-		} else {
+		default:
 			panic(fmt.Sprintf("unexpected binding type %v", b[0]))
 		}
 	}

@@ -229,7 +229,7 @@ func watchForKeyboardDevices() error {
 	}
 
 	go func() {
-		defer watcher.Close()
+		defer func() { _ = watcher.Close() }()
 
 		for {
 			select {

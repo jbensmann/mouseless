@@ -85,5 +85,5 @@ func (v *Keyboard) OriginalKeyUp(code uint16) {
 }
 
 func (v *Keyboard) Close() {
-	v.uinputKeyboard.Close()
+	_ = v.uinputKeyboard.Close()
 }

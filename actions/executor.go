@@ -8,15 +8,9 @@ import (
 
 	"github.com/jbensmann/mouseless/config"
 	"github.com/jbensmann/mouseless/handlers"
-	"github.com/jbensmann/mouseless/keyboard"
 	"github.com/jbensmann/mouseless/virtual"
 	log "github.com/sirupsen/logrus"
 )
-
-type ExecutedBinding struct {
-	cause   *keyboard.Event
-	binding config.Binding
-}
 
 type Executor struct {
 	config              *config.Config

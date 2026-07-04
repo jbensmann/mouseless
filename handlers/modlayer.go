@@ -115,7 +115,7 @@ func (t *ModLayerHandler) checkForModLayerBinding(eventBinding EventBinding) (co
 		mappedBinding = eventBinding.Binding
 	} else {
 		currentLayer := t.layerManager.CurrentLayer()
-		mappedBinding, _ = currentLayer.Bindings[eventBinding.Event.Code]
+		mappedBinding = currentLayer.Bindings[eventBinding.Event.Code]
 	}
 	modLayerBinding, ok := mappedBinding.(config.ModLayerBinding)
 	return modLayerBinding, ok

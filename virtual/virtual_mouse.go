@@ -98,13 +98,14 @@ func (m *Mouse) ButtonPress(triggeredByKey uint16, button config.MouseButton) {
 	m.buttonsByKeys[triggeredByKey] = button
 	m.isButtonPressed[button] = true
 	log.Debugf("Mouse: pressing %v", button)
-	if button == config.ButtonLeft {
+	switch button {
+	case config.ButtonLeft:
 		err = m.uinputMouse.LeftPress()
-	} else if button == config.ButtonMiddle {
+	case config.ButtonMiddle:
 		err = m.uinputMouse.MiddlePress()
-	} else if button == config.ButtonRight {
+	case config.ButtonRight:
 		err = m.uinputMouse.RightPress()
-	} else {
+	default:
 		log.Warnf("Mouse: unknown button: %v", button)
 	}
 	if err != nil {
@@ -148,13 +149,14 @@ func (m *Mouse) OriginalKeyUp(code uint16) {
 		if pressed, ok := m.isButtonPressed[button]; ok && pressed {
 			var err error
 			log.Debugf("Mouse: releasing %v", button)
-			if button == config.ButtonLeft {
+			switch button {
+			case config.ButtonLeft:
 				err = m.uinputMouse.LeftRelease()
-			} else if button == config.ButtonMiddle {
+			case config.ButtonMiddle:
 				err = m.uinputMouse.MiddleRelease()
-			} else if button == config.ButtonRight {
+			case config.ButtonRight:
 				err = m.uinputMouse.RightRelease()
-			} else {
+			default:
 				log.Warnf("Mouse: unknown button: %v", button)
 			}
 			if err != nil {

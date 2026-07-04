@@ -21,7 +21,7 @@ func (d *DefaultHandler) HandleEvent(eventBinding EventBinding) {
 	// resolve the Binding if it is a press and not bound yet
 	if event.IsPress && eventBinding.Binding == nil {
 		currentLayer := d.layerManager.CurrentLayer()
-		binding, _ := currentLayer.Bindings[event.Code]
+		binding := currentLayer.Bindings[event.Code]
 
 		// switch to first layer on escape, if not mapped to something else
 		baseLayer := d.layerManager.BaseLayer()

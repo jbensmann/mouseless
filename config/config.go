@@ -178,7 +178,7 @@ func ReadConfig(fileName string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer configFile.Close()
+	defer func() { _ = configFile.Close() }()
 
 	configString, err := io.ReadAll(configFile)
 	if err != nil {

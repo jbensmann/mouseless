@@ -87,7 +87,7 @@ func (c *ComboHandler) handleNextEvent() {
 				c.comboBindings = comboBindings
 
 				// set timeout to the defined timeout minus the already passed duration since the key press
-				timeout := time.Duration(c.comboTime)*time.Millisecond - time.Now().Sub(event.Time)
+				timeout := time.Duration(c.comboTime)*time.Millisecond - time.Since(event.Time)
 				if timeout < 0 {
 					timeout = 0
 				}
@@ -120,15 +120,16 @@ func (c *ComboHandler) handleNextEvent() {
 		}
 	}
 
-	if c.state == ComboStateNoCombo || c.state == ComboStateCombo {
+	switch c.state {
+	case ComboStateNoCombo, ComboStateCombo:
 		c.comboResolved()
-	} else if c.state == ComboStateIdle {
+	case ComboStateIdle:
 		// forward Event unchanged to the next handler
 		c.EventHandled(*eventBinding)
 
 		// remove the eventBinding from eventInQueue
 		c.eventInQueue = append(c.eventInQueue[:c.eventInPosition], c.eventInQueue[c.eventInPosition+1:]...)
-	} else {
+	default:
 		// state ComboStateWait
 		// move to the next Event
 		c.eventInPosition += 1

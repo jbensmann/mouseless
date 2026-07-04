@@ -102,7 +102,7 @@ func (t *TapHoldHandler) handleNextEvent() {
 
 				// set timeout to the defined timeout minus the already passed duration since the key press
 				if tapHoldBinding.TimeoutMs > 0 {
-					timeout := time.Duration(tapHoldBinding.TimeoutMs)*time.Millisecond - time.Now().Sub(event.Time)
+					timeout := time.Duration(tapHoldBinding.TimeoutMs)*time.Millisecond - time.Since(event.Time)
 					if timeout < 0 {
 						timeout = 0
 					}
@@ -143,12 +143,13 @@ func (t *TapHoldHandler) handleNextEvent() {
 		}
 	}
 
-	if t.state == TapHoldStateHold || t.state == TapHoldStateTap {
+	switch t.state {
+	case TapHoldStateHold, TapHoldStateTap:
 		t.resolveTapHold()
-	} else if t.state == TapHoldStateIdle {
+	case TapHoldStateIdle:
 		// forward Event unchanged to the next handler
 		t.eventHandled(0)
-	} else {
+	default:
 		// state TapHoldStateWait
 		_, wasPressed := t.holdBackStartIsPressed[event.Code]
 		// forward a key release where the press was before the tap hold started, to prevent auto-repeat to kick in
@@ -206,7 +207,7 @@ func (t *TapHoldHandler) checkForTapHoldBinding(eventBinding EventBinding) (conf
 		mappedBinding = eventBinding.Binding
 	} else {
 		currentLayer := t.layerManager.CurrentLayer()
-		mappedBinding, _ = currentLayer.Bindings[eventBinding.Event.Code]
+		mappedBinding = currentLayer.Bindings[eventBinding.Event.Code]
 	}
 	if tapHoldBinding, ok := mappedBinding.(config.TapHoldBinding); ok {
 		return tapHoldBinding, true
