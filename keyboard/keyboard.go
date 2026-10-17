@@ -27,17 +27,20 @@ const (
 )
 
 type Device struct {
-	device        *evdev.InputDevice
-	state         DeviceState
-	lastOpenError string
-	eventChan     chan<- Event
+	device           *evdev.InputDevice
+	state            DeviceState
+	lastOpenError    string
+	eventChan        chan<- Event
+	pointerForwarder PointerForwarder
+	pointerFrame     pointerFrame
 }
 
-func NewKeyboardDevice(device *evdev.InputDevice, eventChan chan<- Event) *Device {
+func NewKeyboardDevice(device *evdev.InputDevice, eventChan chan<- Event, pointerForwarder PointerForwarder) *Device {
 	k := Device{
-		device:    device,
-		state:     StateNotOpen,
-		eventChan: eventChan,
+		device:           device,
+		state:            StateNotOpen,
+		eventChan:        eventChan,
+		pointerForwarder: pointerForwarder,
 	}
 	return &k
 }
@@ -76,6 +79,10 @@ func (d *Device) readKeyboard() {
 			return
 		}
 		for _, event := range events {
+			// the device is grabbed, so pointer events (e.g. from a built-in touchpad) have to be forwarded
+			if d.handlePointerEvent(event) {
+				continue
+			}
 			if event.Type == evdev.EV_KEY {
 				if event.Value == 0 || event.Value == 1 {
 

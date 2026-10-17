@@ -5,8 +5,8 @@ github.com/fsnotify/fsnotify v1.9.0 h1:2Ml+OJNzbYCTzsxtv8vKSFD9PbJjmhYF14k/jKC7S
 github.com/fsnotify/fsnotify v1.9.0/go.mod h1:8jBTzvmWwFyi3Pb8djgCCO5IBqzKJ/Jwo8TRcHyHii0=
 github.com/gvalkov/golang-evdev v0.0.0-20220815104727-7e27d6ce89b6 h1:K9b8efT9f1NkITNgNAm2A1LuoamhG4pAhXVjz5Sfa5Q=
 github.com/gvalkov/golang-evdev v0.0.0-20220815104727-7e27d6ce89b6/go.mod h1:SAzVFKCRezozJTGavF3GX8MBUruETCqzivVLYiywouA=
-github.com/jbensmann/uinput v1.7.1-0.20250425073443-7bb7a032d907 h1:p8XOG21qUClcBZrM4Gjm6vSJunm3DXUI7groQo4qivY=
-github.com/jbensmann/uinput v1.7.1-0.20250425073443-7bb7a032d907/go.mod h1:rL7yWlrw5HRRMazgvp216rxuanYV8n933DsGUM2s8xY=
+github.com/jbensmann/uinput v1.7.1-0.20261017144536-32698365b380 h1:RtXsig1qLmIWTvaCFgSMDPYm8ytE42xC66zV0rM5u7o=
+github.com/jbensmann/uinput v1.7.1-0.20261017144536-32698365b380/go.mod h1:rL7yWlrw5HRRMazgvp216rxuanYV8n933DsGUM2s8xY=
 github.com/jessevdk/go-flags v1.6.1 h1:Cvu5U8UGrLay1rZfv/zP7iLpSHGUZ/Ou68T0iX1bBK4=
 github.com/jessevdk/go-flags v1.6.1/go.mod h1:Mk8T1hIAWpOiJiHa9rJASDK2UGWji0EuPGBnNLMooyc=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

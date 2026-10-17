@@ -306,7 +306,7 @@ func deviceRemoved(e fsnotify.Event) {
 // addDevice adds the given keyboard device to the list of keyboard devices to read from.
 func addDevice(device *evdev.InputDevice) {
 	log.Infof("Reading from keyboard device: %s", device.Fn)
-	kd := keyboard.NewKeyboardDevice(device, keyEventChannel)
+	kd := keyboard.NewKeyboardDevice(device, keyEventChannel, virtualMouse)
 	err := kd.GrabDevice()
 	if err != nil {
 		log.Warnf("Failed to grab keyboard device %s: %v", device.Fn, err)

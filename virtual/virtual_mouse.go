@@ -168,6 +168,53 @@ func (m *Mouse) OriginalKeyUp(code uint16) {
 	}
 }
 
+// ForwardMove moves the pointer by the given amount, used to forward the pointer events of grabbed devices.
+func (m *Mouse) ForwardMove(x, y int32) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	err := m.uinputMouse.Move(x, y)
+	if err != nil {
+		log.Warnf("Mouse: forwarding move failed: %v", err)
+	}
+}
+
+// ForwardScroll scrolls by the given amount, used to forward the pointer events of grabbed devices.
+func (m *Mouse) ForwardScroll(horizontal bool, delta, deltaHighRes int32) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	if deltaHighRes != 0 {
+		err := m.uinputMouse.WheelHighRes(horizontal, deltaHighRes)
+		if err != nil {
+			log.Warnf("Mouse: forwarding scroll failed: %v", err)
+		}
+	}
+	if delta != 0 {
+		err := m.uinputMouse.Wheel(horizontal, delta)
+		if err != nil {
+			log.Warnf("Mouse: forwarding scroll failed: %v", err)
+		}
+	}
+}
+
+// ForwardButton presses or releases the mouse button with the given code, used to forward the pointer events of
+// grabbed devices.
+func (m *Mouse) ForwardButton(code uint16, pressed bool) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	var err error
+	if pressed {
+		err = m.uinputMouse.ButtonPress(int(code))
+	} else {
+		err = m.uinputMouse.ButtonRelease(int(code))
+	}
+	if err != nil {
+		log.Warnf("Mouse: forwarding button failed: %v", err)
+	}
+}
+
 func (m *Mouse) Close() {
 	m.isRunning = false
 
