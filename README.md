@@ -43,6 +43,7 @@ There are many reasons to control the mouse with the keyboard:
 - [Run without sudo](#run-without-sudo)
 - [Run at startup with systemd](#run-at-startup-with-systemd)
 - [Pointer acceleration](#pointer-acceleration)
+- [Disable touchpad while typing](#disable-touchpad-while-typing)
 
 ## Installation
 
@@ -390,3 +391,21 @@ display session.
 
 Since the pointer now moves slower than before, you might want to increase `baseMouseSpeed` and adjust the `speed`
 values to compensate.
+
+## Disable touchpad while typing
+
+Many desktop environments can disable the touchpad while typing, but this only works for keyboards that libinput
+considers to be built in. Since all key events come from the virtual keyboard of mouseless, which looks like an
+external keyboard, the touchpad stays active.
+
+You can fix this by telling libinput to treat the virtual keyboard as an internal one, by creating the file
+`/etc/libinput/local-overrides.quirks` (if you set the `instanceName` config option, adjust the name accordingly):
+
+```ini
+[mouseless keyboard]
+MatchUdevType=keyboard
+MatchName=mouseless keyboard
+AttrKeyboardIntegration=internal
+```
+
+The file is only read when libinput starts, so you have to log out and back in (or reboot) for it to take effect.
