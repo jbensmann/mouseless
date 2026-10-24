@@ -1,6 +1,8 @@
 package virtual
 
 import (
+	"slices"
+
 	"github.com/jbensmann/mouseless/config"
 	"github.com/jbensmann/uinput"
 	log "github.com/sirupsen/logrus"
@@ -34,9 +36,12 @@ func (v *Keyboard) PressKeys(triggeredByKey uint16, codes []uint16) {
 	for c := range v.pressedModifiers {
 		v.releaseKey(c)
 	}
+	// a combo consisting only of modifiers (e.g. leftmeta+leftctrl) is meant to be held while pressing other keys,
+	// so its keys must not be released by subsequent combos
+	onlyModifiers := !slices.ContainsFunc(codes, func(c uint16) bool { return !config.IsModifierKey(c) })
 	for i, c := range codes {
 		v.pressKey(c)
-		if i < len(codes)-1 {
+		if i < len(codes)-1 && !onlyModifiers {
 			v.pressedModifiers[c] = true
 		}
 	}
