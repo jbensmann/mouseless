@@ -189,6 +189,10 @@ by KMonad. The arguments of those actions have to be separated with `;`.
 | `tap-hold-next <tap action>; <hold action>; <timeout>`         | `tap-hold-next a; toggle-layer mouse; 300`         | same as tap-hold, with the addition that the tap action is executed when another key is pressed while `a` is still held down  |
 | `tap-hold-next-release <tap action>; <hold action>; <timeout>` | `tap-hold-next-release a; toggle-layer mouse; 300` | same as tap-hold, with the addition that the tap action is executed when another key is released while `a` is still held down |
 | `multi <action1>; <action2>`                                   | `multi a; toggle-layer mouse`                      | executes two or more actions at once                                                                                          |
+| `one-shot <action>`                                            | `one-shot leftshift`                               | executes the action while held; if tapped, it stays active for the next key press, if tapped twice until tapped again         |
+
+One-shot keys are useful for modifiers and layers, e.g. with `leftshift: one-shot leftshift`, tapping `leftshift` and
+then `a` results in `A`.
 
 Another option to trigger actions is via key combos, e.g. `f+d: layer mouse`, which is triggered when `f` and `d` are
 pressed simultaneously. The maximum duration between the presses is defined with the `comboTime` config option.

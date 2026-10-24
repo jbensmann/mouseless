@@ -36,9 +36,9 @@ func (b *EventHandlerMock) HandleEvent(eventBinding EventBinding) {
 	if event.IsPress {
 		// check for toggle-layer binding
 		if binding, ok := binding.(config.ToggleLayerBinding); ok {
-			b.currentLayer = binding.Layer
 			b.toggleLayerKeys = append(b.toggleLayerKeys, event.Code)
 			b.toggleLayerPrevious = append(b.toggleLayerPrevious, b.currentLayer)
+			b.currentLayer = binding.Layer
 		}
 	} else {
 		// go back to the previous layer when toggleLayerKey is released

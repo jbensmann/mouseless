@@ -19,6 +19,7 @@ const (
 	ActionTapHoldNext        Action = "tap-hold-next"
 	ActionTapHoldNextRelease Action = "tap-hold-next-release"
 	ActionModLayer           Action = "mod-layer"
+	ActionOneShot            Action = "one-shot"
 	ActionMulti              Action = "multi"
 	ActionLayer              Action = "layer"
 	ActionToggleLayer        Action = "toggle-layer"
@@ -115,6 +116,11 @@ type ModLayerBinding struct {
 	BaseBinding
 	ModKey uint16
 	Layer  string
+}
+
+type OneShotBinding struct {
+	BaseBinding
+	Binding Binding
 }
 
 type LayerBinding struct {
@@ -335,6 +341,9 @@ func parseBinding(rawBinding string) (binding Binding, err error) {
 			if err != nil {
 				return nil, err
 			}
+			if _, ok := b.(OneShotBinding); ok {
+				return nil, fmt.Errorf("one-shot is not supported within multi")
+			}
 			multiBinding.Bindings = append(multiBinding.Bindings, b)
 		}
 		binding = multiBinding
@@ -368,6 +377,20 @@ func parseBinding(rawBinding string) (binding Binding, err error) {
 			return nil, err
 		}
 		binding = ModLayerBinding{ModKey: key, Layer: args[1]}
+	case string(ActionOneShot):
+		if len(args) == 0 {
+			return nil, fmt.Errorf("action requires an action as argument")
+		}
+		b, err := parseBinding(argString)
+		if err != nil {
+			return nil, err
+		}
+		// these are resolved by handlers before the one-shot handler and would therefore have no effect
+		switch b.(type) {
+		case OneShotBinding, TapHoldBinding, ModLayerBinding:
+			return nil, fmt.Errorf("action %T is not supported within one-shot", b)
+		}
+		binding = OneShotBinding{Binding: b}
 	case string(ActionLayer):
 		if len(args) != 1 {
 			return nil, fmt.Errorf("action requires exactly one argument")

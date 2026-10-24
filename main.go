@@ -187,6 +187,7 @@ func initHandlers(conf *config.Config) {
 		handlers.NewModLayerHandler(),
 		handlers.NewTapHoldHandler(int64(conf.QuickTapTime)),
 		handlers.NewDefaultHandler(),
+		handlers.NewOneShotHandler(),
 	}
 
 	firstEventHandler = h[0]
