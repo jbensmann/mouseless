@@ -21,6 +21,12 @@ func (d *Vector) Add(d2 Vector) {
 	d.y += d2.y
 }
 
+// repeatKey identifies a repeatedly clicked button, a single key may click multiple buttons (e.g. via multi).
+type repeatKey struct {
+	code   uint16
+	button config.MouseButton
+}
+
 type Mouse struct {
 	uinputMouse uinput.Mouse
 
@@ -36,6 +42,8 @@ type Mouse struct {
 	isButtonPressed map[config.MouseButton]bool
 
 	buttonsByKeys map[uint16]config.MouseButton
+	// closing the channel stops the repeated clicking of the button triggered by the key
+	repeatsByKeys map[repeatKey]chan struct{}
 	moveByKeys    map[uint16]Vector
 	scrollByKeys  map[uint16]Vector
 	speedByKeys   map[uint16]float64
@@ -56,6 +64,7 @@ func NewMouse(conf *config.Config, deviceName string) (*Mouse, error) {
 	v := Mouse{
 		isButtonPressed:        make(map[config.MouseButton]bool),
 		buttonsByKeys:          make(map[uint16]config.MouseButton),
+		repeatsByKeys:          make(map[repeatKey]chan struct{}),
 		moveByKeys:             make(map[uint16]Vector),
 		scrollByKeys:           make(map[uint16]Vector),
 		speedByKeys:            make(map[uint16]float64),
@@ -94,23 +103,46 @@ func (m *Mouse) ButtonPress(triggeredByKey uint16, button config.MouseButton) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	var err error
 	m.buttonsByKeys[triggeredByKey] = button
 	m.isButtonPressed[button] = true
-	log.Debugf("Mouse: pressing %v", button)
-	switch button {
-	case config.ButtonLeft:
-		err = m.uinputMouse.LeftPress()
-	case config.ButtonMiddle:
-		err = m.uinputMouse.MiddlePress()
-	case config.ButtonRight:
-		err = m.uinputMouse.RightPress()
-	default:
-		log.Warnf("Mouse: unknown button: %v", button)
+	m.pressButton(button)
+}
+
+// ButtonRepeat clicks the given button immediately and then repeatedly with the given interval until the key is
+// released.
+func (m *Mouse) ButtonRepeat(triggeredByKey uint16, button config.MouseButton, interval time.Duration) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	key := repeatKey{code: triggeredByKey, button: button}
+	if stop, ok := m.repeatsByKeys[key]; ok {
+		close(stop)
 	}
-	if err != nil {
-		log.Warnf("Mouse: button press failed: %v", err)
-	}
+	stop := make(chan struct{})
+	m.repeatsByKeys[key] = stop
+	m.click(button)
+
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stop:
+				return
+			case <-ticker.C:
+				m.lock.Lock()
+				// the key might have been released while waiting for the lock
+				select {
+				case <-stop:
+					m.lock.Unlock()
+					return
+				default:
+				}
+				m.click(button)
+				m.lock.Unlock()
+			}
+		}
+	}()
 }
 
 func (m *Mouse) ChangeMoveSpeed(triggeredByKey uint16, x float64, y float64) {
@@ -145,26 +177,64 @@ func (m *Mouse) OriginalKeyUp(code uint16) {
 	delete(m.scrollByKeys, code)
 	delete(m.speedByKeys, code)
 
+	for key, stop := range m.repeatsByKeys {
+		if key.code == code {
+			close(stop)
+			delete(m.repeatsByKeys, key)
+		}
+	}
+
 	if button, ok := m.buttonsByKeys[code]; ok {
 		if pressed, ok := m.isButtonPressed[button]; ok && pressed {
-			var err error
-			log.Debugf("Mouse: releasing %v", button)
-			switch button {
-			case config.ButtonLeft:
-				err = m.uinputMouse.LeftRelease()
-			case config.ButtonMiddle:
-				err = m.uinputMouse.MiddleRelease()
-			case config.ButtonRight:
-				err = m.uinputMouse.RightRelease()
-			default:
-				log.Warnf("Mouse: unknown button: %v", button)
-			}
-			if err != nil {
-				log.Warnf("Mouse: button release failed: %v", err)
-			}
+			m.releaseButton(button)
 			delete(m.isButtonPressed, button)
 		}
 		delete(m.buttonsByKeys, code)
+	}
+}
+
+// click presses and releases the given button, unless it is currently held down by another key.
+func (m *Mouse) click(button config.MouseButton) {
+	if m.isButtonPressed[button] {
+		return
+	}
+	m.pressButton(button)
+	m.releaseButton(button)
+}
+
+func (m *Mouse) pressButton(button config.MouseButton) {
+	var err error
+	log.Debugf("Mouse: pressing %v", button)
+	switch button {
+	case config.ButtonLeft:
+		err = m.uinputMouse.LeftPress()
+	case config.ButtonMiddle:
+		err = m.uinputMouse.MiddlePress()
+	case config.ButtonRight:
+		err = m.uinputMouse.RightPress()
+	default:
+		log.Warnf("Mouse: unknown button: %v", button)
+	}
+	if err != nil {
+		log.Warnf("Mouse: button press failed: %v", err)
+	}
+}
+
+func (m *Mouse) releaseButton(button config.MouseButton) {
+	var err error
+	log.Debugf("Mouse: releasing %v", button)
+	switch button {
+	case config.ButtonLeft:
+		err = m.uinputMouse.LeftRelease()
+	case config.ButtonMiddle:
+		err = m.uinputMouse.MiddleRelease()
+	case config.ButtonRight:
+		err = m.uinputMouse.RightRelease()
+	default:
+		log.Warnf("Mouse: unknown button: %v", button)
+	}
+	if err != nil {
+		log.Warnf("Mouse: button release failed: %v", err)
 	}
 }
 
@@ -221,6 +291,10 @@ func (m *Mouse) Close() {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
+	for key, stop := range m.repeatsByKeys {
+		close(stop)
+		delete(m.repeatsByKeys, key)
+	}
 	_ = m.uinputMouse.Close()
 }
 

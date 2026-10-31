@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"time"
 
 	"github.com/jbensmann/mouseless/config"
 	"github.com/jbensmann/mouseless/handlers"
@@ -74,7 +75,11 @@ func (b *Executor) ExecuteBinding(binding config.Binding, causeCode uint16) {
 	case config.MoveBinding:
 		b.virtualMouse.ChangeMoveSpeed(causeCode, t.X, t.Y)
 	case config.ButtonBinding:
-		b.virtualMouse.ButtonPress(causeCode, t.Button)
+		if t.RepeatIntervalMs > 0 {
+			b.virtualMouse.ButtonRepeat(causeCode, t.Button, time.Duration(t.RepeatIntervalMs)*time.Millisecond)
+		} else {
+			b.virtualMouse.ButtonPress(causeCode, t.Button)
+		}
 	case config.KeyBinding:
 		// replace any wildcard with the key that was pressed
 		keys := make([]uint16, len(t.KeyCombo))

@@ -156,6 +156,8 @@ type SpeedBinding struct {
 type ButtonBinding struct {
 	BaseBinding
 	Button MouseButton
+	// when > 0, the button is clicked repeatedly with this interval while the key is held down
+	RepeatIntervalMs int64
 }
 type ExecBinding struct {
 	BaseBinding
@@ -446,14 +448,20 @@ func parseBinding(rawBinding string) (binding Binding, err error) {
 		}
 		binding = SpeedBinding{Speed: speed}
 	case string(ActionButton):
-		if len(args) != 1 {
-			return nil, fmt.Errorf("action requires exactly one argument")
+		if len(args) != 1 && len(args) != 2 {
+			return nil, fmt.Errorf("action requires one or two arguments")
 		}
 		button := MouseButton(strings.ToLower(args[0]))
 		if button != ButtonLeft && button != ButtonMiddle && button != ButtonRight {
 			return nil, fmt.Errorf("unknown button '%v'", args[0])
 		}
-		binding = ButtonBinding{Button: button}
+		var interval int64
+		if len(args) == 2 {
+			if interval, err = strconv.ParseInt(args[1], 10, 64); err != nil || interval <= 0 {
+				return nil, fmt.Errorf("second argument must be a positive number")
+			}
+		}
+		binding = ButtonBinding{Button: button, RepeatIntervalMs: interval}
 	case string(ActionExec):
 		if len(args) == 0 {
 			return nil, fmt.Errorf("action requires at least one argument")

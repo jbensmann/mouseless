@@ -170,6 +170,7 @@ jumps to the arrows layer when rightalt is pressed and jumps back on release. Th
 | `scroll <direction>`                | `scroll up`                                                 | scrolls up, down, left or right                                                                     |
 | `speed <multiplier>`                | `speed 2.5`                                                 | multiplies the pointer and scroll speeds with the given value                                       |
 | `button <button>`                   | `button left`                                               | presses a mouse button (left, right or middle)                                                      |
+| `button <button> <interval>`        | `button left 200`                                           | clicks a mouse button repeatedly every 200ms while the mapped key is held down                      |
 | `exec <cmd>`                        | `exec notify-send "hello from mouseless"`                   | executes the given command (the example sends a desktop notification)                               |
 | `exec-press-release <cmd1>; <cmd2>` | `exec-press-release notify-send press; notify-send release` | executes different commands when the key is pressed and released                                    |
 | `reload-config`                     | `reload-config`                                             | reloads the configuration file                                                                      |

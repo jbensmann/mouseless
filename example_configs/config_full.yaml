@@ -85,6 +85,8 @@ layers:
     f: button left
     d: button middle
     s: button right
+    # click the left button repeatedly every 200ms while held down
+    a: button left 200
     # move to the top left corner
     k0: "exec xdotool mousemove 0 0"
 # another layer for arrows and some other keys
