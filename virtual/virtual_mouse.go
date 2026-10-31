@@ -41,7 +41,8 @@ type Mouse struct {
 
 	isButtonPressed map[config.MouseButton]bool
 
-	buttonsByKeys map[uint16]config.MouseButton
+	// a single key may press multiple buttons (e.g. via multi)
+	buttonsByKeys map[uint16][]config.MouseButton
 	// closing the channel stops the repeated clicking of the button triggered by the key
 	repeatsByKeys map[repeatKey]chan struct{}
 	moveByKeys    map[uint16]Vector
@@ -63,7 +64,7 @@ func NewMouse(conf *config.Config, deviceName string) (*Mouse, error) {
 	var err error
 	v := Mouse{
 		isButtonPressed:        make(map[config.MouseButton]bool),
-		buttonsByKeys:          make(map[uint16]config.MouseButton),
+		buttonsByKeys:          make(map[uint16][]config.MouseButton),
 		repeatsByKeys:          make(map[repeatKey]chan struct{}),
 		moveByKeys:             make(map[uint16]Vector),
 		scrollByKeys:           make(map[uint16]Vector),
@@ -103,7 +104,7 @@ func (m *Mouse) ButtonPress(triggeredByKey uint16, button config.MouseButton) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	m.buttonsByKeys[triggeredByKey] = button
+	m.buttonsByKeys[triggeredByKey] = append(m.buttonsByKeys[triggeredByKey], button)
 	m.isButtonPressed[button] = true
 	m.pressButton(button)
 }
@@ -184,13 +185,13 @@ func (m *Mouse) OriginalKeyUp(code uint16) {
 		}
 	}
 
-	if button, ok := m.buttonsByKeys[code]; ok {
+	for _, button := range m.buttonsByKeys[code] {
 		if pressed, ok := m.isButtonPressed[button]; ok && pressed {
 			m.releaseButton(button)
 			delete(m.isButtonPressed, button)
 		}
-		delete(m.buttonsByKeys, code)
 	}
+	delete(m.buttonsByKeys, code)
 }
 
 // click presses and releases the given button, unless it is currently held down by another key.
