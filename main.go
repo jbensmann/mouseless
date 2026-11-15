@@ -34,9 +34,10 @@ var (
 	configDevices        []string
 	configDevicesExclude []string
 
-	keyboardDevices []*keyboard.Device
-	virtualMouse    *virtual.Mouse
-	virtualKeyboard *virtual.Keyboard
+	keyboardDevices    []*keyboard.Device
+	virtualDeviceNames []string
+	virtualMouse       *virtual.Mouse
+	virtualKeyboard    *virtual.Keyboard
 
 	keyEventChannel     chan keyboard.Event
 	firstEventHandler   handlers.EventHandler
@@ -101,6 +102,12 @@ func run(conf *config.Config) {
 	keyEventChannel = make(chan keyboard.Event, 1000)
 	reloadConfigChannel = make(chan struct{}, 1)
 
+	// start watching before listing the devices, so that devices created in between are not missed
+	watcher, err := newDeviceWatcher()
+	if err != nil {
+		exitError("Failed to watch for keyboard devices", err)
+	}
+
 	allDevices, err := evdev.ListInputDevices("/dev/input/event*")
 	if err != nil {
 		exitError("Failed to detect keyboard devices", err)
@@ -112,6 +119,7 @@ func run(conf *config.Config) {
 	}
 	mouseName := instanceName + " mouse"
 	keyboardName := instanceName + " keyboard"
+	virtualDeviceNames = []string{mouseName, keyboardName}
 
 	// check if another instance of mouse is already running
 	for _, device := range allDevices {
@@ -170,10 +178,8 @@ func run(conf *config.Config) {
 		}
 	}
 
-	err = watchForKeyboardDevices()
-	if err != nil {
-		exitError("Failed to watch for keyboard devices", err)
-	}
+	// the events received in the meantime are buffered
+	go handleDeviceEvents(watcher)
 
 	virtualMouse.StartLoop()
 	mainLoop()
@@ -213,12 +219,11 @@ func mainLoop() {
 	}
 }
 
-// watchForKeyboardDevices starts a watcher for devices in /dev/input, and adds or removes keyboard
-// devices matching the device specification in the config file.
-func watchForKeyboardDevices() error {
+// newDeviceWatcher creates a watcher for devices in /dev/input.
+func newDeviceWatcher() (*fsnotify.Watcher, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	watchPath := "/dev/input"
@@ -226,37 +231,39 @@ func watchForKeyboardDevices() error {
 	err = watcher.Add(watchPath)
 	if err != nil {
 		_ = watcher.Close()
-		return fmt.Errorf("failed to add watcher for %s: %w", watchPath, err)
+		return nil, fmt.Errorf("failed to add watcher for %s: %w", watchPath, err)
 	}
+	return watcher, nil
+}
 
-	go func() {
-		defer func() { _ = watcher.Close() }()
+// handleDeviceEvents adds or removes keyboard devices matching the device specification in the
+// config file when they are created or removed in /dev/input.
+func handleDeviceEvents(watcher *fsnotify.Watcher) {
+	defer func() { _ = watcher.Close() }()
 
-		for {
-			select {
-			case e, ok := <-watcher.Events:
-				if !ok {
-					log.Errorf("Device watcher closed unexpectetly")
-					return
-				}
-				log.Debugf("Detected a device event: %s", e)
-				if strings.HasPrefix(e.Name, "/dev/input/event") {
-					if e.Op.Has(fsnotify.Create) {
-						deviceCreated(e)
-					} else if e.Op.Has(fsnotify.Remove) {
-						deviceRemoved(e)
-					}
-				}
-			case err, ok := <-watcher.Errors:
-				if !ok {
-					log.Errorf("Device watcher closed unexpectetly")
-					return
-				}
-				log.Warnf("Device watcher error: %v", err)
+	for {
+		select {
+		case e, ok := <-watcher.Events:
+			if !ok {
+				log.Errorf("Device watcher closed unexpectetly")
+				return
 			}
+			log.Debugf("Detected a device event: %s", e)
+			if strings.HasPrefix(e.Name, "/dev/input/event") {
+				if e.Op.Has(fsnotify.Create) {
+					deviceCreated(e)
+				} else if e.Op.Has(fsnotify.Remove) {
+					deviceRemoved(e)
+				}
+			}
+		case err, ok := <-watcher.Errors:
+			if !ok {
+				log.Errorf("Device watcher closed unexpectetly")
+				return
+			}
+			log.Warnf("Device watcher error: %v", err)
 		}
-	}()
-	return nil
+	}
 }
 
 // deviceCreated is called when a new device file is created.
@@ -283,6 +290,7 @@ func deviceCreated(e fsnotify.Event) {
 	}
 	if !shallDeviceBeUsed(device) {
 		log.Debugf("Ignoring the device")
+		_ = device.File.Close()
 	} else {
 		log.Infof("Detected new keyboard device: %s (%s)", device.Fn, device.Name)
 		addDevice(device)
@@ -403,6 +411,10 @@ func printTable(headers []string, rows [][]string) {
 // 1. (config.devices is empty and device is a keyboard) or (device is listed in config.devices)
 // 2. device is not listed in config.devicesExclude
 func shallDeviceBeUsed(device *evdev.InputDevice) bool {
+	// never grab the own virtual devices
+	if slices.Contains(virtualDeviceNames, device.Name) {
+		return false
+	}
 	if len(configDevices) == 0 {
 		if !isKeyboardDevice(device) {
 			return false
