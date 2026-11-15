@@ -5,7 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.0] - Unreleased
+## [0.4.0] - Unreleased
+
+### Added
+
+- New action `one-shot <action>`: keeps the action active for the next key press when tapped (#109).
+- Repeated clicking with `button <button> <interval>` (#66).
+- Pointer events of grabbed devices (e.g. keyboards with a built-in touchpad) are now forwarded unchanged.
+
+### Fixed
+
+- Wait for all keys to be released before grabbing a device, so that no key stays stuck.
+- Don't miss keyboards that are connected while mouseless is starting.
+- Run `exec` commands in a goroutine so that they don't block the event loop.
+- Keep modifier-only combos held when pressing other keys (#58).
+- Release all mouse buttons pressed by a single key.
+
+## [0.3.0] - 2025-12-01
 
 ### Added
 
